@@ -1,0 +1,4 @@
+packages:
+  bech32.cabal
+
+flags: +development
