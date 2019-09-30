@@ -26,3 +26,4 @@ Right (HumanReadablePart "ca",DataPart "8qen2wpjxdnrzdtzxucrsdtxv5ck2enzxeskvves
 ```
 
 For more inspiration, have a look at the property tests within the `test` directory.
+
