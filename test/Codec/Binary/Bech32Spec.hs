@@ -97,9 +97,9 @@ spec = do
                         T.breakOnEnd (T.singleton separatorChar) checksum
                 let Just (first, rest') = T.uncons rest
                 let checksumCorrupted =
-                        (hrp `T.snoc` (chr (ord first `xor` 1)))
+                        (hrp `T.snoc` chr (ord first `xor` 1))
                         `T.append` rest'
-                (Bech32.decode checksumCorrupted) `shouldSatisfy` isLeft'
+                Bech32.decode checksumCorrupted `shouldSatisfy` isLeft'
                 -- test that re-encoding the decoded checksum results in
                 -- the same checksum.
                 let checksumEncoded = Bech32.encode resultHRP resultData
@@ -109,7 +109,7 @@ spec = do
     describe "Invalid Checksums" $ forM_ invalidChecksums $
         \(checksum, expect) ->
             it (T.unpack checksum) $
-                Bech32.decode checksum `shouldBe` (Left expect)
+                Bech32.decode checksum `shouldBe` Left expect
 
     describe "More Encoding/Decoding Cases" $ do
         it "length > maximum" $ do
@@ -301,24 +301,24 @@ spec = do
                         (Bech32.decode corruptedString `shouldBe` Left
                             StringToDecodeHasMixedCase)
 
-    describe "Roundtrip (encode . decode)" $ do
+    describe "Roundtrip (encode . decode)" $
         it "Can perform roundtrip for valid data" $ property $ \(hrp, dp) ->
             (eitherToMaybe (Bech32.encode hrp dp)
                 >>= eitherToMaybe . Bech32.decode) === Just (hrp, dp)
 
-    describe "Roundtrip (dataPartToBytes . dataPartFromBytes)" $ do
+    describe "Roundtrip (dataPartToBytes . dataPartFromBytes)" $
         it "Can perform roundtrip base conversion" $ property $ \bs ->
             (Bech32.dataPartToBytes . Bech32.dataPartFromBytes) bs === Just bs
 
-    describe "Roundtrip (dataPartFromText . dataPartToText)" $ do
+    describe "Roundtrip (dataPartFromText . dataPartToText)" $
         it "Can perform roundtrip conversion" $ property $ \dp ->
             (Bech32.dataPartFromText . Bech32.dataPartToText) dp === Just dp
 
-    describe "Roundtrip (dataPartFromWords . dataPartToWords)" $ do
+    describe "Roundtrip (dataPartFromWords . dataPartToWords)" $
         it "Can perform roundtrip conversion" $ property $ \dp ->
             (Bech32.dataPartFromWords . Bech32.dataPartToWords) dp === dp
 
-    describe "Roundtrip (dataPartToWords . dataPartFromWords)" $ do
+    describe "Roundtrip (dataPartToWords . dataPartFromWords)" $
         it "Can perform roundtrip conversion" $ property $ \ws ->
             (Bech32.dataPartToWords . Bech32.dataPartFromWords) ws === ws
 
@@ -327,16 +327,16 @@ spec = do
             (Bech32.humanReadablePartFromText . Bech32.humanReadablePartToText)
                 hrp === Right hrp
 
-    describe "Roundtrip (toBase256 . toBase32)" $ do
+    describe "Roundtrip (toBase256 . toBase32)" $
         it "Can perform roundtrip base conversion" $ property $ \ws ->
             (Bech32.toBase256 . Bech32.toBase32) ws === Just ws
 
-    describe "Roundtrip (toBase32 . toBase256)" $ do
+    describe "Roundtrip (toBase32 . toBase256)" $
         it "Can perform roundtrip base conversion" $ property $ \ws ->
             isJust (Bech32.toBase256 ws) ==>
                 (Bech32.toBase32 <$> Bech32.toBase256 ws) === Just ws
 
-    describe "Roundtrip (dataCharToWord . dataCharFromWord)" $ do
+    describe "Roundtrip (dataCharToWord . dataCharFromWord)" $
         it "can perform roundtrip character set conversion" $
             property $ \w ->
                 Bech32.dataCharToWord (toLower (Bech32.dataCharFromWord w))
@@ -400,7 +400,7 @@ spec = do
                     .&&.
                     (outputWordsSuffix `shouldSatisfy` all (== 0))
 
-    describe "Pointless test to trigger coverage on derived instances" $ do
+    describe "Pointless test to trigger coverage on derived instances" $
         it (show $ humanReadablePartFromText $ T.pack "ca") True
 
 -- Taken from the BIP 0173 specification: https://git.io/fjBIN
@@ -514,8 +514,8 @@ bech32CharSet :: Set Char
 bech32CharSet =
     Set.filter (not . isUpper) $
         Set.fromList [humanReadableCharMinBound .. humanReadableCharMaxBound]
-            `Set.union` (Set.singleton separatorChar)
-            `Set.union` (Set.fromList Bech32.dataCharList)
+            `Set.union` Set.singleton separatorChar
+            `Set.union` Set.fromList Bech32.dataCharList
 
 -- | Find the index of an element in a sorted vector using simple binary search.
 sortedVectorElemIndex :: Ord a => a -> Vector a -> Maybe Int
