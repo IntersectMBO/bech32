@@ -468,7 +468,7 @@ instance Ix Word5 where
     inRange (m,n) i = m <= i && i <= n
 
 word5 :: Integral a => a -> Word5
-word5 x = Word5 ((fromIntegral x) .&. 31)
+word5 x = Word5 (fromIntegral x .&. 31)
 {-# INLINE word5 #-}
 {-# SPECIALIZE INLINE word5 :: Word8 -> Word5 #-}
 
@@ -483,7 +483,7 @@ polymod values = foldl' go 1 values .&. 0x3fffffff
     go chk value =
         foldl' xor chk' [g | (g, i) <- zip generator [25 ..], testBit chk i]
       where
-        chk' = chk .<<. 5 `xor` (fromWord5 value)
+        chk' = chk .<<. 5 `xor` fromWord5 value
         generator =
             [ 0x3b6a57b2
             , 0x26508e6d
@@ -751,7 +751,7 @@ locateErrors residue len
       l_s1 /= -1 &&
       l_s2 /= -1 && (2 * l_s1 - l_s2 - l_s0 + 2046) `mod` 1023 == 0 =
           let p1 = (l_s1 - l_s0 + 1023) `mod` 1023 in
-          if (p1 >= len) then [] else
+          if p1 >= len then [] else
           let l_e1 = l_s0 + (1023 - 997) * p1 in
           [p1 | l_e1 `mod` 33 <= 0]
     | otherwise =
@@ -776,7 +776,7 @@ locateErrors residue len
         | s1_s0p2 == 0      = []
         | l_e2 `mod` 33 > 0 = []
         | l_e1 `mod` 33 > 0 = []
-        | (p1 < p2)         = [p1, p2]
+        | p1 < p2           = [p1, p2]
         | otherwise         = [p2, p1]
       where
         inv_p1_p2 = 1023 -
