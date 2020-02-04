@@ -56,6 +56,7 @@ module Codec.Binary.Bech32.Internal
     , humanReadablePartMaxLength
     , humanReadableCharMinBound
     , humanReadableCharMaxBound
+    , unsafeHumanReadablePartFromText
 
       -- * Bit Manipulation
     , convertBits
@@ -74,6 +75,8 @@ module Codec.Binary.Bech32.Internal
 
 import Prelude
 
+import Control.Exception
+    ( Exception, throw )
 import Control.Monad
     ( guard, join )
 import Data.Array
@@ -102,6 +105,8 @@ import Data.Maybe
     ( isNothing, mapMaybe )
 import Data.Text
     ( Text )
+import Data.Typeable
+    ( Typeable )
 import Data.Word
     ( Word8 )
 
@@ -252,6 +257,21 @@ data HumanReadablePartError
     | HumanReadablePartTooLong
     | HumanReadablePartContainsInvalidChars [CharPosition]
     deriving (Eq, Show)
+
+-- | Like `humanReadablePartFromText`, but throws a runtime error if given
+--   invalid input.
+--
+-- It is recommended to make use of this function only when using literals.
+--
+-- For example:
+--
+-- >>> unsafeHumanReadablePartFromText "addr"
+-- HumanReadablePart "addr"
+--
+unsafeHumanReadablePartFromText :: Text -> HumanReadablePart
+unsafeHumanReadablePartFromText t =
+    either (throw . InvalidInputException t) id $
+        humanReadablePartFromText t
 
 -- | Get the raw text of the human-readable part of a Bech32 string.
 humanReadablePartToText :: HumanReadablePart -> Text
@@ -792,6 +812,21 @@ locateErrors residue len
             (if s0 == 0 then 0 else gf_1024_exp Arr.! ((l_s0 + p2) `mod` 1023))
         s2_s1p1 = s2 `xor`
             (if s1 == 0 then 0 else gf_1024_exp Arr.! ((l_s1 + p1) `mod` 1023))
+
+{-------------------------------------------------------------------------------
+                            Unsafe Input Validation
+-------------------------------------------------------------------------------}
+
+data InvalidInputException i r = InvalidInputException
+    { input :: i
+    -- ^ The input that is considered to be invalid.
+    , reason :: r
+    -- ^ The reason that the input is considered invalid.
+    }
+    deriving Show
+
+instance (Show i, Show r, Typeable i, Typeable r) =>
+    Exception (InvalidInputException i r)
 
 {-------------------------------------------------------------------------------
                                    Utilities

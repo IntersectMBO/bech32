@@ -25,11 +25,16 @@ import Codec.Binary.Bech32.Internal
     , humanReadableCharMaxBound
     , humanReadableCharMinBound
     , humanReadablePartFromText
+    , humanReadablePartMaxLength
+    , humanReadablePartMinLength
     , humanReadablePartToText
     , separatorChar
+    , unsafeHumanReadablePartFromText
     )
 import Control.DeepSeq
     ( deepseq )
+import Control.Exception
+    ( evaluate )
 import Control.Monad
     ( forM_, replicateM )
 import Data.Bits
@@ -57,7 +62,15 @@ import Data.Vector
 import Data.Word
     ( Word8 )
 import Test.Hspec
-    ( Spec, describe, expectationFailure, it, shouldBe, shouldSatisfy )
+    ( Spec
+    , anyException
+    , describe
+    , expectationFailure
+    , it
+    , shouldBe
+    , shouldSatisfy
+    , shouldThrow
+    )
 import Test.QuickCheck
     ( Arbitrary (..)
     , Positive (..)
@@ -402,6 +415,40 @@ spec = do
 
     describe "Pointless test to trigger coverage on derived instances" $
         it (show $ humanReadablePartFromText $ T.pack "ca") True
+
+    describe "unsafeHumanReadablePartFromText" $ do
+
+        forM_ validHumanReadablePrefixes $ \hrp -> do
+            let title t = "Works as expected for a valid HRP: " <> t
+            it (title $ T.unpack hrp) $
+                Right (unsafeHumanReadablePartFromText hrp)
+                    `shouldBe` humanReadablePartFromText hrp
+
+        forM_ invalidHumanReadablePrefixes $ \hrp -> do
+            let title = "Throws exception when provided with an invalid HRP: "
+            it (title <> T.unpack hrp) $
+                evaluate (unsafeHumanReadablePartFromText hrp)
+                    `shouldThrow` anyException
+
+validHumanReadablePrefixes :: [Text]
+validHumanReadablePrefixes =
+    [ T.replicate humanReadablePartMaxLength "_"
+    , T.replicate humanReadablePartMinLength "_"
+    , "ca"
+    , "addr"
+    , "xprv_"
+    , "awesome!"
+    ]
+
+invalidHumanReadablePrefixes :: [Text]
+invalidHumanReadablePrefixes =
+    [ T.replicate (succ humanReadablePartMaxLength) "_"
+    , T.replicate (pred humanReadablePartMinLength) "_"
+    , T.pack [succ humanReadableCharMaxBound]
+    , T.pack [pred humanReadableCharMinBound]
+    , "臥虎藏龍"
+    , "鑫"
+    ]
 
 -- Taken from the BIP 0173 specification: https://git.io/fjBIN
 validBech32Strings :: [Text]
