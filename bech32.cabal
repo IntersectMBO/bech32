@@ -49,6 +49,7 @@ library
   exposed-modules:
       Codec.Binary.Bech32
       Codec.Binary.Bech32.Internal
+      Codec.Binary.Bech32.Unsafe
 
 test-suite bech32-test
   default-language:
