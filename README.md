@@ -1,7 +1,10 @@
 # Bech32 library
 
-The library implements Bech32 which is a segwit address format specified by [BIP-0173](https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki).
-It is a checksummed base32 format and a standard for native segregated witness output addresses using it.
+The library implements Bech32, an address format specified by
+[BIP-0173](https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki).
+
+It is a checksummed Base32 format and a standard for native segregated witness
+output addresses.
 
 # How to use it
 
