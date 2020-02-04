@@ -6,26 +6,32 @@ The library implements Bech32, an address format specified by
 It is a checksummed Base32 format and a standard for native segregated witness
 output addresses.
 
-# How to use it
+# Usage
 
-See the hello world example below:
+## Encoding data
 
-``` haskell
-λ import Codec.Binary.Bech32
+```hs
 λ import Prelude
-λ let (Right hrp) = humanReadablePartFromText "ca"
-λ hrp
-HumanReadablePart "ca"
-λ import Data.Text
-λ let addr = "835823f15b7085fe1efb6af305e65da62bcf5226779a91dd3130b155cb697782b1" :: Text
+λ import Codec.Binary.Bech32
 λ import Data.Text.Encoding
-λ let dataPart = dataPartFromBytes (encodeUtf8 addr)
-λ dataPart
-DataPart "8qen2wpjxdnrzdtzxucrsdtxv5ck2enzxeskvvesx4jnvdtyvymrycnrvc6nyv3kxumnjcfex9jxgve3xvcxyvf4x43kyd3exumnsvnzxy"
-λ let bech32encoded = encodeLenient hrp dataPart
-"ca18qen2wpjxdnrzdtzxucrsdtxv5ck2enzxeskvvesx4jnvdtyvymrycnrvc6nyv3kxumnjcfex9jxgve3xvcxyvf4x43kyd3exumnsvnzxys57suf"
-λ decodeLenient bech32encoded
-Right (HumanReadablePart "ca",DataPart "8qen2wpjxdnrzdtzxucrsdtxv5ck2enzxeskvvesx4jnvdtyvymrycnrvc6nyv3kxumnjcfex9jxgve3xvcxyvf4x43kyd3exumnsvnzxy")
+λ messageToEncode = "I'm sorry Dave, I'm afraid I can't do that."
+λ dataPart = dataPartFromBytes $ encodeUtf8 messageToEncode
+λ Right prefix = humanReadablePartFromText "example"
+λ encode prefix dataPart
+Right "example1fynk6grndae8y7fqg3shvefvypyjwmfqv9n8yctfvssyjgrrv9hzwapqv3hjqargv96zu3pzau9"
 ```
 
-For more inspiration, have a look at the property tests within the `test` directory.
+## Decoding data
+
+```hs
+λ import Prelude
+λ import Codec.Binary.Bech32
+λ import Data.Text.Encoding
+λ input = "example1fynk6grndae8y7fqg3shvefvypyjwmfqv9n8yctfvssyjgrrv9hzwapqv3hjqargv96zu3pzau9"
+λ Right (prefix, dataPart) = decode input
+λ decodeUtf8 <$> dataPartToBytes dataPart
+Just "I'm sorry Dave, I'm afraid I can't do that."
+```
+
+For more inspiration, have a look at the property tests within the `test`
+directory.
