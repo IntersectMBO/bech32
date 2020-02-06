@@ -695,6 +695,8 @@ instance Arbitrary HumanReadablePart where
       where
         chars = humanReadablePartToText hrp
 
+-- | A human-readable part that may (or may not) contain one or more invalid
+--   characters.
 newtype HumanReadablePartWithSuspiciousChars =
     HumanReadablePartWithSuspiciousChars Text
     deriving (Eq, Show)
@@ -714,6 +716,7 @@ instance Arbitrary HumanReadablePartWithSuspiciousChars where
             , succ humanReadableCharMaxBound
             )
 
+-- | A human-readable part that may (or may not) be too long or too short.
 newtype HumanReadablePartWithSuspiciousLength =
     HumanReadablePartWithSuspiciousLength Text
     deriving (Eq, Show)
