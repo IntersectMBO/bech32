@@ -1,6 +1,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -17,14 +18,18 @@ import Codec.Binary.Bech32.Internal
     , DataPart
     , DecodingError (..)
     , HumanReadablePart
+    , HumanReadablePartError (..)
     , dataPartFromBytes
     , dataPartFromText
     , dataPartFromWords
     , dataPartIsValid
     , dataPartToWords
+    , humanReadableCharIsValid
     , humanReadableCharMaxBound
     , humanReadableCharMinBound
     , humanReadablePartFromText
+    , humanReadablePartMaxLength
+    , humanReadablePartMinLength
     , humanReadablePartToText
     , separatorChar
     )
@@ -62,10 +67,13 @@ import Test.QuickCheck
     ( Arbitrary (..)
     , Positive (..)
     , arbitraryBoundedEnum
+    , checkCoverage
     , choose
     , counterexample
     , cover
     , elements
+    , frequency
+    , oneof
     , property
     , withMaxSuccess
     , (.&&.)
@@ -110,6 +118,71 @@ spec = do
         \(checksum, expect) ->
             it (T.unpack checksum) $
                 Bech32.decode checksum `shouldBe` Left expect
+
+    describe "Parsing human-readable parts from text" $ do
+
+        describe "Known-good human readable parts parse correctly." $
+            forM_ validHumanReadableParts $ \hrp ->
+                it (T.unpack hrp) $
+                    (humanReadablePartToText <$> humanReadablePartFromText hrp)
+                    `shouldBe` Right hrp
+
+        describe "Known-bad human readable parts fail to parse." $
+            forM_ invalidHumanReadableParts $ \hrp ->
+                it (T.unpack hrp) $
+                    humanReadablePartFromText hrp `shouldSatisfy` isLeft'
+
+        it "Characters are checked correctly for validity." $
+            property $ \(HumanReadablePartWithSuspiciousChars hrp) ->
+                let isValid = T.all humanReadableCharIsValid hrp
+                    invalidError = HumanReadablePartContainsInvalidChars $
+                        CharPosition . fst <$>
+                        filter
+                            ((not . humanReadableCharIsValid) . snd)
+                            ([0 .. ] `zip` T.unpack hrp)
+                in
+                checkCoverage
+                    $ cover 10 isValid
+                        "no invalid characters"
+                    $ cover 10 (not isValid)
+                        "one or more invalid characters"
+                    $ if
+                    | isValid ->
+                        fmap humanReadablePartToText
+                            (humanReadablePartFromText hrp)
+                            `shouldBe` Right (T.toLower hrp)
+                    | otherwise ->
+                        humanReadablePartFromText hrp
+                            `shouldBe` Left invalidError
+
+        it "Lengths are checked correctly." $
+            property $ \(HumanReadablePartWithSuspiciousLength hrp) ->
+                let lo  = humanReadablePartMinLength
+                    hi  = humanReadablePartMaxLength
+                    len = T.length hrp
+                in
+                checkCoverage
+                    $ cover 10 (len < lo)
+                        "too short"
+                    $ cover 10 (len == lo)
+                        "minimum length"
+                    $ cover 10 (len > lo && len < hi)
+                        "comfortably within bounds"
+                    $ cover 10 (len == hi)
+                        "maximum length"
+                    $ cover 10 (len > hi)
+                        "too long"
+                    $ if
+                    | len < lo ->
+                        humanReadablePartFromText hrp
+                            `shouldBe` Left HumanReadablePartTooShort
+                    | len > hi ->
+                        humanReadablePartFromText hrp
+                            `shouldBe` Left HumanReadablePartTooLong
+                    | otherwise ->
+                        fmap humanReadablePartToText
+                            (humanReadablePartFromText hrp)
+                            `shouldBe` Right (T.toLower hrp)
 
     describe "More Encoding/Decoding Cases" $ do
         it "length > maximum" $ do
@@ -404,6 +477,22 @@ spec = do
         it (show $ humanReadablePartFromText $ T.pack "ca") True
 
 -- Taken from the BIP 0173 specification: https://git.io/fjBIN
+validHumanReadableParts :: [Text]
+validHumanReadableParts =
+    [ "addr"
+    , "ca"
+    , "bc"
+    , "tb"
+    , "xprv"
+    ]
+
+invalidHumanReadableParts :: [Text]
+invalidHumanReadableParts =
+    [ "鑫"
+    , "臥虎藏龍"
+    ]
+
+-- Taken from the BIP 0173 specification: https://git.io/fjBIN
 validBech32Strings :: [Text]
 validBech32Strings =
     [ "A12UEL5L"
@@ -606,6 +695,63 @@ instance Arbitrary HumanReadablePart where
             ]
       where
         chars = humanReadablePartToText hrp
+
+-- | A human-readable part that may (or may not) contain one or more invalid
+--   characters.
+newtype HumanReadablePartWithSuspiciousChars =
+    HumanReadablePartWithSuspiciousChars Text
+    deriving (Eq, Show)
+
+instance Arbitrary HumanReadablePartWithSuspiciousChars where
+    arbitrary = do
+        len <- genLength
+        chars <- replicateM len genChar
+        return $ HumanReadablePartWithSuspiciousChars $ T.pack chars
+      where
+        genChar = frequency
+            [ (98, genCharValid)
+            , ( 1, genCharBelowMinBound)
+            , ( 1, genCharAboveMaxBound)
+            ]
+        genCharValid = choose
+            ( humanReadableCharMinBound
+            , humanReadableCharMaxBound
+            )
+        genCharBelowMinBound = choose
+            ( toEnum 0
+            , toEnum (fromEnum humanReadableCharMinBound - 1)
+            )
+        genCharAboveMaxBound = choose
+            ( toEnum (fromEnum humanReadableCharMaxBound + 1)
+            , toEnum (fromEnum humanReadableCharMaxBound * 2)
+            )
+        genLength = choose
+            ( humanReadablePartMinLength
+            , humanReadablePartMaxLength
+            )
+
+-- | A human-readable part that may (or may not) be too long or too short.
+newtype HumanReadablePartWithSuspiciousLength =
+    HumanReadablePartWithSuspiciousLength Text
+    deriving (Eq, Show)
+
+instance Arbitrary HumanReadablePartWithSuspiciousLength where
+    arbitrary = do
+        len <- oneof
+            [ choose (0, lo - 1)
+            , pure lo
+            , choose (lo + 1, hi - 1)
+            , pure hi
+            , choose (hi + 1, hi * 2)
+            ]
+        chars <- replicateM len arbitrary
+        return
+            $ HumanReadablePartWithSuspiciousLength
+            $ T.pack
+            $ fmap getHumanReadableChar chars
+      where
+        lo = humanReadablePartMinLength
+        hi = humanReadablePartMaxLength
 
 instance Arbitrary ByteString where
     shrink bytes | BS.null bytes = []
