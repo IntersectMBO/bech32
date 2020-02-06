@@ -54,6 +54,7 @@ module Codec.Binary.Bech32.Internal
     , humanReadablePartToWords
     , humanReadablePartMinLength
     , humanReadablePartMaxLength
+    , humanReadableCharIsValid
     , humanReadableCharMinBound
     , humanReadableCharMaxBound
 

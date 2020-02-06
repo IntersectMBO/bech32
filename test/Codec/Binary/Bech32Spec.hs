@@ -24,6 +24,7 @@ import Codec.Binary.Bech32.Internal
     , dataPartFromWords
     , dataPartIsValid
     , dataPartToWords
+    , humanReadableCharIsValid
     , humanReadableCharMaxBound
     , humanReadableCharMinBound
     , humanReadablePartFromText
@@ -117,7 +118,31 @@ spec = do
             it (T.unpack checksum) $
                 Bech32.decode checksum `shouldBe` Left expect
 
-    describe "Parsing human-readable parts from text" $
+    describe "Parsing human-readable parts from text" $ do
+
+        it "Characters are checked correctly for validity." $
+            property $ \(HumanReadablePartWithSuspiciousChars hrp) ->
+                let isValid = T.all humanReadableCharIsValid hrp
+                    invalidError =
+                        HumanReadablePartContainsInvalidChars $
+                            CharPosition . fst <$>
+                            filter
+                                ((not . humanReadableCharIsValid) . snd)
+                                ([0 .. ] `zip` T.unpack hrp)
+                in
+                checkCoverage
+                    $ cover 10 isValid
+                        "no invalid characters"
+                    $ cover 10 (not isValid)
+                        "one or more invalid characters"
+                    $ if
+                    | isValid ->
+                        fmap humanReadablePartToText
+                            (humanReadablePartFromText hrp)
+                            `shouldBe` Right (T.toLower hrp)
+                    | otherwise ->
+                        humanReadablePartFromText hrp
+                            `shouldBe` Left invalidError
 
         it "Lengths are checked correctly." $
             property $ \(HumanReadablePartWithSuspiciousLength hrp) ->
@@ -643,6 +668,25 @@ instance Arbitrary HumanReadablePart where
             ]
       where
         chars = humanReadablePartToText hrp
+
+newtype HumanReadablePartWithSuspiciousChars =
+    HumanReadablePartWithSuspiciousChars Text
+    deriving (Eq, Show)
+
+instance Arbitrary HumanReadablePartWithSuspiciousChars where
+    arbitrary = do
+        len <- genLength
+        chars <- replicateM len genChar
+        return $ HumanReadablePartWithSuspiciousChars $ T.pack chars
+      where
+        genLength = choose
+            ( humanReadablePartMinLength
+            , humanReadablePartMaxLength
+            )
+        genChar = choose
+            ( pred humanReadableCharMinBound
+            , succ humanReadableCharMaxBound
+            )
 
 newtype HumanReadablePartWithSuspiciousLength =
     HumanReadablePartWithSuspiciousLength Text
