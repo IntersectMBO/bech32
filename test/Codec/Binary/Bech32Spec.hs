@@ -72,6 +72,7 @@ import Test.QuickCheck
     , counterexample
     , cover
     , elements
+    , frequency
     , oneof
     , property
     , withMaxSuccess
@@ -707,13 +708,26 @@ instance Arbitrary HumanReadablePartWithSuspiciousChars where
         chars <- replicateM len genChar
         return $ HumanReadablePartWithSuspiciousChars $ T.pack chars
       where
+        genChar = frequency
+            [ (98, genCharValid)
+            , ( 1, genCharBelowMinBound)
+            , ( 1, genCharAboveMaxBound)
+            ]
+        genCharValid = choose
+            ( humanReadableCharMinBound
+            , humanReadableCharMaxBound
+            )
+        genCharBelowMinBound = choose
+            ( toEnum 0
+            , toEnum (fromEnum humanReadableCharMinBound - 1)
+            )
+        genCharAboveMaxBound = choose
+            ( toEnum (fromEnum humanReadableCharMaxBound + 1)
+            , toEnum (fromEnum humanReadableCharMaxBound * 2)
+            )
         genLength = choose
             ( humanReadablePartMinLength
             , humanReadablePartMaxLength
-            )
-        genChar = choose
-            ( pred humanReadableCharMinBound
-            , succ humanReadableCharMaxBound
             )
 
 -- | A human-readable part that may (or may not) be too long or too short.
