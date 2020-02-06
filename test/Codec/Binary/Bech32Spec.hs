@@ -1,6 +1,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -17,6 +18,7 @@ import Codec.Binary.Bech32.Internal
     , DataPart
     , DecodingError (..)
     , HumanReadablePart
+    , HumanReadablePartError (..)
     , dataPartFromBytes
     , dataPartFromText
     , dataPartFromWords
@@ -25,6 +27,8 @@ import Codec.Binary.Bech32.Internal
     , humanReadableCharMaxBound
     , humanReadableCharMinBound
     , humanReadablePartFromText
+    , humanReadablePartMaxLength
+    , humanReadablePartMinLength
     , humanReadablePartToText
     , separatorChar
     )
@@ -62,10 +66,12 @@ import Test.QuickCheck
     ( Arbitrary (..)
     , Positive (..)
     , arbitraryBoundedEnum
+    , checkCoverage
     , choose
     , counterexample
     , cover
     , elements
+    , oneof
     , property
     , withMaxSuccess
     , (.&&.)
@@ -110,6 +116,37 @@ spec = do
         \(checksum, expect) ->
             it (T.unpack checksum) $
                 Bech32.decode checksum `shouldBe` Left expect
+
+    describe "Parsing human-readable parts from text" $
+
+        it "Lengths are checked correctly." $
+            property $ \(HumanReadablePartWithSuspiciousLength hrp) ->
+                let lo  = humanReadablePartMinLength
+                    hi  = humanReadablePartMaxLength
+                    len = T.length hrp
+                in
+                checkCoverage
+                    $ cover 10 (len < lo)
+                        "too short"
+                    $ cover 10 (len == lo)
+                        "minimum length"
+                    $ cover 10 (len > lo && len < hi)
+                        "comfortably within bounds"
+                    $ cover 10 (len == hi)
+                        "maximum length"
+                    $ cover 10 (len > hi)
+                        "too long"
+                    $ if
+                    | len < lo ->
+                        humanReadablePartFromText hrp
+                            `shouldBe` Left HumanReadablePartTooShort
+                    | len > hi ->
+                        humanReadablePartFromText hrp
+                            `shouldBe` Left HumanReadablePartTooLong
+                    | otherwise ->
+                        fmap humanReadablePartToText
+                            (humanReadablePartFromText hrp)
+                            `shouldBe` Right (T.toLower hrp)
 
     describe "More Encoding/Decoding Cases" $ do
         it "length > maximum" $ do
@@ -606,6 +643,28 @@ instance Arbitrary HumanReadablePart where
             ]
       where
         chars = humanReadablePartToText hrp
+
+newtype HumanReadablePartWithSuspiciousLength =
+    HumanReadablePartWithSuspiciousLength Text
+    deriving (Eq, Show)
+
+instance Arbitrary HumanReadablePartWithSuspiciousLength where
+    arbitrary = do
+        len <- oneof
+            [ choose (0, lo - 1)
+            , pure lo
+            , choose (lo + 1, hi - 1)
+            , pure hi
+            , choose (hi + 1, hi * 2)
+            ]
+        chars <- replicateM len arbitrary
+        return
+            $ HumanReadablePartWithSuspiciousLength
+            $ T.pack
+            $ fmap getHumanReadableChar chars
+      where
+        lo = humanReadablePartMinLength
+        hi = humanReadablePartMaxLength
 
 instance Arbitrary ByteString where
     shrink bytes | BS.null bytes = []
