@@ -120,15 +120,25 @@ spec = do
 
     describe "Parsing human-readable parts from text" $ do
 
+        describe "Known-good human readable parts parse correctly." $
+            forM_ validHumanReadableParts $ \hrp ->
+                it (T.unpack hrp) $
+                    (humanReadablePartToText <$> humanReadablePartFromText hrp)
+                    `shouldBe` Right hrp
+
+        describe "Known-bad human readable parts fail to parse." $
+            forM_ invalidHumanReadableParts $ \hrp ->
+                it (T.unpack hrp) $
+                    humanReadablePartFromText hrp `shouldSatisfy` isLeft'
+
         it "Characters are checked correctly for validity." $
             property $ \(HumanReadablePartWithSuspiciousChars hrp) ->
                 let isValid = T.all humanReadableCharIsValid hrp
-                    invalidError =
-                        HumanReadablePartContainsInvalidChars $
-                            CharPosition . fst <$>
-                            filter
-                                ((not . humanReadableCharIsValid) . snd)
-                                ([0 .. ] `zip` T.unpack hrp)
+                    invalidError = HumanReadablePartContainsInvalidChars $
+                        CharPosition . fst <$>
+                        filter
+                            ((not . humanReadableCharIsValid) . snd)
+                            ([0 .. ] `zip` T.unpack hrp)
                 in
                 checkCoverage
                     $ cover 10 isValid
@@ -464,6 +474,22 @@ spec = do
 
     describe "Pointless test to trigger coverage on derived instances" $
         it (show $ humanReadablePartFromText $ T.pack "ca") True
+
+-- Taken from the BIP 0173 specification: https://git.io/fjBIN
+validHumanReadableParts :: [Text]
+validHumanReadableParts =
+    [ "addr"
+    , "ca"
+    , "bc"
+    , "tb"
+    , "xprv"
+    ]
+
+invalidHumanReadableParts :: [Text]
+invalidHumanReadableParts =
+    [ "鑫"
+    , "臥虎藏龍"
+    ]
 
 -- Taken from the BIP 0173 specification: https://git.io/fjBIN
 validBech32Strings :: [Text]
