@@ -147,9 +147,10 @@ dataPartToBytes :: DataPart -> Maybe ByteString
 dataPartToBytes dp = BS.pack <$>
     (toBase256 =<< traverse dataCharToWord (T.unpack $ dataPartToText dp))
 
--- | Constructs a 'DataPart' from textual input. All characters in the input
---   must be a member of 'dataCharList', the set of characters permitted to
---   appear within the data part of a Bech32 string.
+-- | Constructs a 'DataPart' from textual input.
+--
+-- All characters in the input must be a member of 'dataCharList', the set of
+-- characters permitted to appear within the data part of a Bech32 string.
 --
 -- Returns 'Nothing' if any character in the input is not a member of
 -- 'dataCharList'.
@@ -192,12 +193,17 @@ dataPartToWords = mapMaybe dataCharToWord . T.unpack . dataPartToText
 
 -- | Returns true iff. the specified character is permitted to appear within
 --   the data part of a Bech32 string.
---   See here for more details: https://git.io/fj8FS
+--
+-- See here for more details: https://git.io/fj8FS
+--
 dataCharIsValid :: Char -> Bool
 dataCharIsValid = (`Map.member` dataCharToWordMap)
 
 -- | A list of all characters that are permitted to appear within the data part
---   of a Bech32 string. See here for more details: https://git.io/fj8FS
+--   of a Bech32 string.
+--
+-- See here for more details: https://git.io/fj8FS
+--
 dataCharList :: String
 dataCharList = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
 
@@ -250,8 +256,15 @@ humanReadablePartFromText hrp
 --   human-readable part of a Bech32 string.
 data HumanReadablePartError
     = HumanReadablePartTooShort
+      -- ^ The human-readable part is /shorter than/
+      -- 'humanReadablePartMinLength'.
     | HumanReadablePartTooLong
+      -- ^ The human-readable part is /longer than/
+      -- 'humanReadablePartMaxLength'.
     | HumanReadablePartContainsInvalidChars [CharPosition]
+      -- ^ The human-readable part contains one or more characters whose values
+      -- are /less than/ 'humanReadableCharMinBound' or /greater than/
+      -- 'humanReadableCharMaxBound'.
     deriving (Eq, Show)
 
 -- | Get the raw text of the human-readable part of a Bech32 string.
@@ -296,9 +309,10 @@ humanReadableCharMaxBound = chr 126
                             Encoding & Decoding
 -------------------------------------------------------------------------------}
 
--- | Like 'encode' but allows output to be longer than 90 characters. This isn't
--- ideal as the error detection becomes worse as string get longer but it's
--- still acceptable.
+-- | Like 'encode' but allows output to be longer than 90 characters.
+--
+-- This isn't ideal, as Bech32 error detection becomes worse as strings get
+-- longer, but it may be useful in certain circumstances.
 --
 -- From BIP-0173:
 --
@@ -314,6 +328,27 @@ encodeLenient hrp dp = humanReadablePartToText hrp
     dcp = dataCharFromWord <$> dataPartToWords dp <> createChecksum hrp dp
 
 -- | Encode a human-readable string and data payload into a Bech32 string.
+--
+-- == Example
+--
+-- >>> import Prelude
+-- >>> import Codec.Binary.Bech32
+-- >>> import Data.Text.Encoding
+--
+-- First, prepare a human-readable prefix:
+--
+-- >>> Right prefix = humanReadablePartFromText "example"
+--
+-- Next, prepare a data payload:
+--
+-- >>> messageToEncode = "Lorem ipsum dolor sit amet!"
+-- >>> dataPart = dataPartFromBytes $ encodeUtf8 messageToEncode
+--
+-- Finally, produce a Bech32 string:
+--
+-- >>> encode prefix dataPart
+-- Right "example1f3hhyetdyp5hqum4d5sxgmmvdaezqumfwssxzmt9wsss9un3cx"
+--
 encode :: HumanReadablePart -> DataPart -> Either EncodingError Text
 encode hrp dp
     | T.length result > encodedStringMaxLength = Left EncodedStringTooLong
@@ -323,11 +358,15 @@ encode hrp dp
 
 -- | Represents the set of error conditions that may occur while encoding a
 --   Bech32 string.
-data EncodingError = EncodedStringTooLong
+data EncodingError =
+    EncodedStringTooLong
+    -- ^ The resultant encoded string would be /longer than/
+    -- 'encodedStringMaxLength'.
     deriving (Eq, Show)
 
--- | Like 'decode' but does not enforce a maximum length. See also
--- 'encodeLenient' for details.
+-- | Like 'decode' but does not enforce a maximum length.
+--
+-- See also 'encodeLenient' for details.
 decodeLenient :: Text -> Either DecodingError (HumanReadablePart, DataPart)
 decodeLenient bech32 = do
     guardE (T.length bech32 >= encodedStringMinLength) StringToDecodeTooShort
@@ -364,6 +403,28 @@ decodeLenient bech32 = do
                 locateErrors (fromIntegral residue) (T.length bech32 - 1)
 
 -- | Decode a Bech32 string into a human-readable part and data part.
+--
+-- == Example
+--
+-- >>> import Prelude
+-- >>> import Codec.Binary.Bech32
+-- >>> import Data.Text.Encoding
+--
+-- First, decode the input:
+--
+-- >>> input = "example1f3hhyetdyp5hqum4d5sxgmmvdaezqumfwssxzmt9wsss9un3cx"
+-- >>> Right (prefix, dataPart) = decode input
+--
+-- Next, examine the decoded human-readable prefix:
+--
+-- >>> humanReadablePartToText prefix
+-- "example"
+--
+-- Finally, examine the decoded data payload:
+--
+-- >>> decodeUtf8 <$> dataPartToBytes dataPart
+-- Just "Lorem ipsum dolor sit amet!"
+--
 decode :: Text -> Either DecodingError (HumanReadablePart, DataPart)
 decode bech32 = do
     guardE (T.length bech32 <= encodedStringMaxLength) StringToDecodeTooLong
@@ -399,19 +460,31 @@ humanReadablePartError = \case
 -- string with the 'decode' function.
 data DecodingError
     = StringToDecodeTooLong
+      -- ^ The string to decode is /longer than/ 'encodedStringMaxLength'.
     | StringToDecodeTooShort
+      -- ^ The string to decode is /shorter than/ 'encodedStringMinLength'.
     | StringToDecodeHasMixedCase
+      -- ^ The string to decode contains /both/ upper case /and/ lower case
+      -- characters.
     | StringToDecodeMissingSeparatorChar
+      -- ^ The string to decode is missing the /separator character/, specified
+      -- by 'separatorChar'.
     | StringToDecodeContainsInvalidChars [CharPosition]
-      -- ^ In cases where it is possible to determine the exact locations of
+      -- ^ The string to decode contains one or more /invalid characters/.
+      --
+      -- In cases where it /is/ possible to determine the exact locations of
       -- erroneous characters, this list will encode those locations. Clients
-      -- can use this information to provide user feedback. In cases where it
-      -- isn't possible to reliably determine the locations of erroneous
-      -- characters, this list will be empty.
+      -- can use this information to provide user feedback.
+      --
+      -- In cases where it /isn't/ possible to reliably determine the locations
+      -- of erroneous characters, this list will be empty.
     deriving (Eq, Show)
 
--- | The separator character. This character appears immediately after the
--- human-readable part and before the data part.
+-- | The separator character.
+--
+-- This character appears immediately after the human-readable part and before
+-- the data part in an encoded string.
+--
 separatorChar :: Char
 separatorChar = '1'
 
@@ -423,15 +496,19 @@ checksumLength = 6
 separatorLength :: Int
 separatorLength = 1
 
--- | The maximum length of an encoded string, in bytes. This length includes the
---   human-readable part, the separator character, the encoded data portion,
---   and the checksum.
+-- | The maximum length of an encoded string, in bytes.
+--
+-- This length includes the human-readable part, the separator character, the
+-- encoded data portion, and the checksum.
+--
 encodedStringMaxLength :: Int
 encodedStringMaxLength = 90
 
--- | The minimum length of an encoded string, in bytes. This length includes the
---   human-readable part, the separator character, the encoded data portion,
---   and the checksum.
+-- | The minimum length of an encoded string, in bytes.
+--
+-- This length includes the human-readable part, the separator character, the
+-- encoded data portion, and the checksum.
+--
 encodedStringMinLength :: Int
 encodedStringMinLength =
     humanReadablePartMinLength + separatorLength + checksumLength
