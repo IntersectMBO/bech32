@@ -518,6 +518,11 @@ encodedStringMinLength =
 -------------------------------------------------------------------------------}
 
 -- | The zero-based position of a character in a string, counting from the left.
+--
+-- Values of this type are typically used to reflect the positions of errors.
+--
+-- See 'DecodingError'.
+--
 newtype CharPosition = CharPosition Int
     deriving (Eq, Ord, Show)
 

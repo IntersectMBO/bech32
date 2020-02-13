@@ -25,7 +25,7 @@ module Codec.Binary.Bech32
     -- ** Decoding
     , DecodingError (..)
 
-    -- * Types
+    -- * Core Types
 
     -- ** Data Payloads
     , DataPart
@@ -35,6 +35,7 @@ module Codec.Binary.Bech32
     -- *** Conversion to and from 'Text'
     , dataPartFromText
     , dataPartToText
+
     -- ** Human-Readable Prefixes
     , HumanReadablePart
     -- *** Conversion to and from 'Text'
@@ -42,6 +43,11 @@ module Codec.Binary.Bech32
     , humanReadablePartToText
     -- *** Error Handling
     , HumanReadablePartError (..)
+
+    -- * Additional Types
+
+    -- ** Character Positions
+    , CharPosition (..)
 
     -- * Advanced Usage
 
