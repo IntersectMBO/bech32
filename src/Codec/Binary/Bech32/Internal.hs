@@ -327,7 +327,7 @@ encodeLenient hrp dp = humanReadablePartToText hrp
   where
     dcp = dataCharFromWord <$> dataPartToWords dp <> createChecksum hrp dp
 
--- | Encode a human-readable string and data payload into a Bech32 string.
+-- | Encode a Bech32 string from a human-readable prefix and data payload.
 --
 -- == Example
 --
@@ -402,7 +402,7 @@ decodeLenient bech32 = do
             (T.length bech32 - separatorLength - 1 - ) <$>
                 locateErrors (fromIntegral residue) (T.length bech32 - 1)
 
--- | Decode a Bech32 string into a human-readable part and data part.
+-- | Decode a Bech32 string into a human-readable prefix and data payload.
 --
 -- == Example
 --
