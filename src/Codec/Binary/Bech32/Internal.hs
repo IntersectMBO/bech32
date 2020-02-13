@@ -176,7 +176,7 @@ dataPartFromText text
 dataPartToText :: DataPart -> Text
 dataPartToText (DataPart t) = t
 
--- | Construct a 'DataPart' directly from words.
+-- | Construct a 'DataPart' directly from a list of words.
 --
 -- This function guarantees to satisfy the following properties:
 --
@@ -186,8 +186,13 @@ dataPartToText (DataPart t) = t
 dataPartFromWords :: [Word5] -> DataPart
 dataPartFromWords = DataPart . T.pack . fmap dataCharFromWord
 
--- | Convert a 'DataPart' into words.
+-- | Unpack a 'DataPart' into a list of its constituent words.
 --
+-- This function guarantees to satisfy the following properties:
+--
+-- > dataPartFromWords (dataPartToWords d) == d
+-- > dataPartToWords (dataPartFromWords w) == w
+---
 dataPartToWords :: DataPart -> [Word5]
 dataPartToWords = mapMaybe dataCharToWord . T.unpack . dataPartToText
 
@@ -534,6 +539,21 @@ newtype CharPosition = CharPosition Int
 (.>>.) = unsafeShiftR
 (.<<.) = unsafeShiftL
 
+-- | Represents a __data word__ of __5 bits__ in width.
+--
+-- Each character in the data portion of a Bech32 string encodes exactly 5 bits
+-- of data.
+--
+-- === Construction and Deconstruction
+--
+-- Use the 'toEnum' and 'fromEnum' functions to construct and deconstruct
+-- 'Word5' values.
+--
+-- === Packing Words into Data Payloads
+--
+-- Use the 'dataPartFromWords' and 'dataPartToWords' functions to pack and
+-- unpack 'Word5' values into and out of data payloads.
+--
 newtype Word5 = Word5 { getWord5 :: Word8 }
     deriving (Eq, Ord, Show)
 

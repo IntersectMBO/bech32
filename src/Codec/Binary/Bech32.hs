@@ -29,16 +29,19 @@ module Codec.Binary.Bech32
 
     -- ** Data Payloads
     , DataPart
-    -- *** Conversion to and from 'ByteString'
+    -- *** Conversion to and from Words
+    , dataPartFromWords
+    , dataPartToWords
+    -- *** Conversion to and from Bytes
     , dataPartFromBytes
     , dataPartToBytes
-    -- *** Conversion to and from 'Text'
+    -- *** Conversion to and from Text
     , dataPartFromText
     , dataPartToText
 
     -- ** Human-Readable Prefixes
     , HumanReadablePart
-    -- *** Conversion to and from 'Text'
+    -- *** Conversion to and from Text
     , humanReadablePartFromText
     , humanReadablePartToText
     -- *** Error Handling
@@ -48,6 +51,8 @@ module Codec.Binary.Bech32
 
     -- ** Character Positions
     , CharPosition (..)
+    -- ** Data Words
+    , Word5
 
     -- * Advanced Usage
 
