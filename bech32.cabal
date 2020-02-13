@@ -1,10 +1,10 @@
 name:          bech32
-version:       1.0.0
+version:       1.0.1
 synopsis:      Implementation of the Bech32 cryptocurrency address format (BIP 0173).
 description:   Implementation of the Bech32 cryptocurrency address format documented in the
                BIP (Bitcoin Improvement Proposal) 0173.
 author:        IOHK Engineering Team
-maintainer:    operations@iohk.io, erikd@mega-nerd.com
+maintainer:    operations@iohk.io, erikd@mega-nerd.com, jonathan.knowles@iohk.io
 copyright:     2017 Marko Bencun, 2019-2020 IOHK
 license:       Apache-2.0
 license-file:  LICENSE
