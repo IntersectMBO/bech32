@@ -11,42 +11,58 @@
 
 module Codec.Binary.Bech32
     (
-    -- * Encoding
-      encode
+    -- * Basic Usage
 
-    -- * Decoding
+    -- ** Encoding
+      encode
+    -- ** Decoding
     , decode
 
-    -- * Error handling
+    -- * Error Handling
+
+    -- ** Encoding
     , EncodingError (..)
+    -- ** Decoding
     , DecodingError (..)
 
-    -- * Encoding data payloads
-    , DataPart
-    , dataPartFromBytes
-    , dataPartFromText
-    , dataPartToBytes
-    , dataPartToText
+    -- * Types
 
-    -- * Encoding human-readable prefixes
+    -- ** Data Payloads
+    , DataPart
+    -- *** Conversion to and from 'ByteString'
+    , dataPartFromBytes
+    , dataPartToBytes
+    -- *** Conversion to and from 'Text'
+    , dataPartFromText
+    , dataPartToText
+    -- ** Human-Readable Prefixes
     , HumanReadablePart
-    , HumanReadablePartError (..)
+    -- *** Conversion to and from 'Text'
     , humanReadablePartFromText
     , humanReadablePartToText
+    -- *** Error Handling
+    , HumanReadablePartError (..)
 
-    -- * Encoding with greater leniency
+    -- * Advanced Usage
+
+    -- ** Encoding and Decoding with Greater Leniency
     , encodeLenient
     , decodeLenient
 
-    -- * Constants
+    -- * Fundamental Constants
+
+    -- ** Data Payloads
     , dataCharList
-    , encodedStringMaxLength
-    , encodedStringMinLength
+    -- ** Human-Readable Prefixes
     , humanReadablePartMinLength
     , humanReadablePartMaxLength
     , humanReadableCharMinBound
     , humanReadableCharMaxBound
+    -- ** Encoded Strings
+    , encodedStringMaxLength
+    , encodedStringMinLength
     , separatorChar
+
     ) where
 
 import Codec.Binary.Bech32.Internal
