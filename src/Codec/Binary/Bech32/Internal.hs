@@ -176,7 +176,7 @@ dataPartFromText text
 dataPartToText :: DataPart -> Text
 dataPartToText (DataPart t) = t
 
--- | Construct a 'DataPart' directly from words.
+-- | Construct a 'DataPart' directly from a list of words.
 --
 -- This function guarantees to satisfy the following properties:
 --
@@ -186,8 +186,13 @@ dataPartToText (DataPart t) = t
 dataPartFromWords :: [Word5] -> DataPart
 dataPartFromWords = DataPart . T.pack . fmap dataCharFromWord
 
--- | Convert a 'DataPart' into words.
+-- | Unpack a 'DataPart' into a list of its constituent words.
 --
+-- This function guarantees to satisfy the following properties:
+--
+-- > dataPartFromWords (dataPartToWords d) == d
+-- > dataPartToWords (dataPartFromWords w) == w
+---
 dataPartToWords :: DataPart -> [Word5]
 dataPartToWords = mapMaybe dataCharToWord . T.unpack . dataPartToText
 
@@ -314,11 +319,11 @@ humanReadableCharMaxBound = chr 126
 -- This isn't ideal, as Bech32 error detection becomes worse as strings get
 -- longer, but it may be useful in certain circumstances.
 --
--- From BIP-0173:
+-- From [BIP-0173](https://en.bitcoin.it/wiki/BIP_0173):
 --
---     Even though the chosen code performs reasonably well up to 1023
+--     "Even though the chosen code performs reasonably well up to 1023
 --     characters, other designs are preferable for lengths above 89
---     characters (excluding the separator).
+--     characters (excluding the separator)."
 --
 encodeLenient :: HumanReadablePart -> DataPart -> Text
 encodeLenient hrp dp = humanReadablePartToText hrp
@@ -327,7 +332,7 @@ encodeLenient hrp dp = humanReadablePartToText hrp
   where
     dcp = dataCharFromWord <$> dataPartToWords dp <> createChecksum hrp dp
 
--- | Encode a human-readable string and data payload into a Bech32 string.
+-- | Encode a Bech32 string from a human-readable prefix and data payload.
 --
 -- == Example
 --
@@ -402,7 +407,7 @@ decodeLenient bech32 = do
             (T.length bech32 - separatorLength - 1 - ) <$>
                 locateErrors (fromIntegral residue) (T.length bech32 - 1)
 
--- | Decode a Bech32 string into a human-readable part and data part.
+-- | Decode a Bech32 string into a human-readable prefix and data payload.
 --
 -- == Example
 --
@@ -518,6 +523,11 @@ encodedStringMinLength =
 -------------------------------------------------------------------------------}
 
 -- | The zero-based position of a character in a string, counting from the left.
+--
+-- Values of this type are typically used to reflect the positions of errors.
+--
+-- See 'DecodingError'.
+--
 newtype CharPosition = CharPosition Int
     deriving (Eq, Ord, Show)
 
@@ -529,6 +539,21 @@ newtype CharPosition = CharPosition Int
 (.>>.) = unsafeShiftR
 (.<<.) = unsafeShiftL
 
+-- | Represents a __data word__ of __5 bits__ in width.
+--
+-- Each character in the data portion of a Bech32 string encodes exactly 5 bits
+-- of data.
+--
+-- === Construction and Deconstruction
+--
+-- Use the 'toEnum' and 'fromEnum' functions to construct and deconstruct
+-- 'Word5' values.
+--
+-- === Packing Words into Data Payloads
+--
+-- Use the 'dataPartFromWords' and 'dataPartToWords' functions to pack and
+-- unpack 'Word5' values into and out of data payloads.
+--
 newtype Word5 = Word5 { getWord5 :: Word8 }
     deriving (Eq, Ord, Show)
 
