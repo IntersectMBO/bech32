@@ -314,11 +314,11 @@ humanReadableCharMaxBound = chr 126
 -- This isn't ideal, as Bech32 error detection becomes worse as strings get
 -- longer, but it may be useful in certain circumstances.
 --
--- From BIP-0173:
+-- From [BIP-0173](https://en.bitcoin.it/wiki/BIP_0173):
 --
---     Even though the chosen code performs reasonably well up to 1023
+--     "Even though the chosen code performs reasonably well up to 1023
 --     characters, other designs are preferable for lengths above 89
---     characters (excluding the separator).
+--     characters (excluding the separator)."
 --
 encodeLenient :: HumanReadablePart -> DataPart -> Text
 encodeLenient hrp dp = humanReadablePartToText hrp
