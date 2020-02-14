@@ -161,7 +161,7 @@ dataPartToBytes dp = BS.pack <$>
 --
 dataPartFromText :: Text -> Maybe DataPart
 dataPartFromText text
-    | T.any (not . dataCharIsValid) textLower = Nothing
+    | T.any dataCharIsValid textLower = Nothing
     | otherwise = pure $ DataPart textLower
   where
     textLower = T.toLower text
