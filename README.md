@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/input-output-hk/bech32.svg?branch=master)](https://travis-ci.org/input-output-hk/bech32)
+
 # Bech32 Library
 
 The library implements Bech32, an address format specified by
