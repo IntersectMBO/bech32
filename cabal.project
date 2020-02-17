@@ -1,4 +1,4 @@
 packages:
-  bech32.cabal
+  bech32/bech32.cabal
 
 flags: +development
