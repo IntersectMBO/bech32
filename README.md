@@ -1,4 +1,5 @@
-[![Build Status](https://travis-ci.org/input-output-hk/bech32.svg?branch=master)](https://travis-ci.org/input-output-hk/bech32)
+<a href="https://github.com/input-output-hk/bech32/releases"><img src="https://img.shields.io/github/release/input-output-hk/bech32.svg?style=for-the-badge" /></a>
+<a href="https://travis-ci.org/input-output-hk/bech32"><img src="https://img.shields.io/travis/input-output-hk/bech32/master.svg?label=BUILD&style=for-the-badge"/></a>
 
 # Bech32 Library
 
