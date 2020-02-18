@@ -1,5 +1,9 @@
 # ChangeLog for `bech32`
 
+## 1.0.2 -- 2020-02-19
+
++ Added support for the `bech32-th` extension library.
+
 ## 1.0.1 -- 2020-02-13
 
 + Improved module documentation, adding basic examples to help beginner users
