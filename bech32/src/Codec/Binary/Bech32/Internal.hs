@@ -75,6 +75,8 @@ module Codec.Binary.Bech32.Internal
 
 import Prelude
 
+import Control.Exception
+    ( Exception )
 import Control.Monad
     ( guard, join )
 import Data.Array
@@ -271,6 +273,8 @@ data HumanReadablePartError
       -- are /less than/ 'humanReadableCharMinBound' or /greater than/
       -- 'humanReadableCharMaxBound'.
     deriving (Eq, Show)
+
+instance Exception HumanReadablePartError
 
 -- | Get the raw text of the human-readable part of a Bech32 string.
 humanReadablePartToText :: HumanReadablePart -> Text
