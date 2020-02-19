@@ -20,8 +20,8 @@ install:
 
 script:
  - cabal-3.0 configure --enable-tests
- - pushd bech32    && cabal-3.0 check && popd
- - pushd bech32-th && cabal-3.0 check && popd
+ - (cd bech32    && cabal-3.0 check)
+ - (cd bech32-th && cabal-3.0 check)
  - cabal-3.0 build all
  - cabal-3.0 test all --test-show-details=streaming
  - cabal-3.0 haddock all
