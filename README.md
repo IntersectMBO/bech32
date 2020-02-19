@@ -1,13 +1,22 @@
 <a href="https://github.com/input-output-hk/bech32/releases"><img src="https://img.shields.io/github/release/input-output-hk/bech32.svg?style=for-the-badge" /></a>
 <a href="https://travis-ci.org/input-output-hk/bech32"><img src="https://img.shields.io/travis/input-output-hk/bech32/master.svg?label=BUILD&style=for-the-badge"/></a>
 
-# Bech32 Library
+## Bech32 Haskell Libraries
 
-The library implements Bech32, an address format specified by
+The repository provides [Haskell](https://www.haskell.org/) libraries for
+working with the **Bech32** address format, as specified by
 [BIP-0173](https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki).
 
-It is a checksummed Base32 format and a standard for native segregated witness
-addresses.
+There are **two** libraries provided:
+
+* [`bech32`](http://hackage.haskell.org/package/bech32)
+
+    Core primitives for encoding and decoding Bech32 strings.
+
+* [`bech32-th`](http://hackage.haskell.org/package/bech32-th)
+
+    Template-Haskell specific extensions, including quasiquoters
+    for compile-time parsing of string literals.
 
 ## Contents
 
@@ -19,7 +28,10 @@ addresses.
 
 ## Documentation
 
-For comprehensive instructions on how to use this library, see the [Haddock documentation](https://hackage.haskell.org/package/bech32/docs/Codec-Binary-Bech32.html).
+For comprehensive instructions on how to use these libraries, see the Haddock documentation:
+
+* [Documentation for `bech32`](https://hackage.haskell.org/package/bech32/docs/Codec-Binary-Bech32.html)
+* [Documentation for `bech32-th`](https://hackage.haskell.org/package/bech32-th/docs/Codec-Binary-Bech32-TH.html)
 
 ## Usage
 
