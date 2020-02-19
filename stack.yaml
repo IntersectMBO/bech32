@@ -2,4 +2,5 @@ resolver: lts-13.24
 compiler: ghc-8.6.5
 
 packages:
-  - .
+  - bech32
+  - bech32-th

@@ -20,8 +20,9 @@ install:
 
 script:
  - cabal-3.0 configure --enable-tests
- - cabal-3.0 build
- - cabal-3.0 test --test-show-details=streaming
- - cabal-3.0 check
- - cabal-3.0 haddock
- - cabal-3.0 sdist
+ - (cd bech32    && cabal-3.0 check)
+ - (cd bech32-th && cabal-3.0 check)
+ - cabal-3.0 build all
+ - cabal-3.0 test all --test-show-details=streaming
+ - cabal-3.0 haddock all
+ - cabal-3.0 sdist all
