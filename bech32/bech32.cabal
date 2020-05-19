@@ -39,7 +39,7 @@ library
       -Werror
   build-depends:
       array
-    , base                                  < 4.15
+    , base >= 4.11.1.0 && < 4.15
     , bytestring
     , containers
     , extra
