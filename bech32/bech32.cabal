@@ -71,7 +71,7 @@ test-suite bech32-test
     , deepseq
     , extra
     , hspec
-    , QuickCheck
+    , QuickCheck >= 2.12
     , text
     , vector
   build-tools:
