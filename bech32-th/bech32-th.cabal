@@ -39,7 +39,7 @@ library
     ghc-options:
       -Werror
   build-depends:
-      base
+      base >= 4.11.1.0 && < 4.15
     , bech32 >= 1.0.2
     , template-haskell
     , text
@@ -65,7 +65,7 @@ test-suite bech32-th-test
     ghc-options:
       -Werror
   build-depends:
-      base < 4.14
+      base
     , bech32
     , bech32-th
     , hspec
