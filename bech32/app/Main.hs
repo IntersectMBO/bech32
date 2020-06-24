@@ -121,26 +121,27 @@ data Encoding = Base16 | Bech32 | Base58 deriving (Show, Eq)
 detectEncoding :: String -> Maybe Encoding
 detectEncoding str
     | length str < minimalSizeForDetection = Nothing
-    | otherwise = isBase16 <|> isBech32 <|> isBase58
+    | otherwise = resembleBase16 <|> resembleBech32 <|> resembleBase58
   where
-    isBase16 = do
+    resembleBase16 = do
         guard (all isHexDigit (toLower <$> str))
         guard (even (length str))
         pure Base16
 
-    isBech32 = do
+    resembleBech32 = do
         guard (not (null humanpart))
         guard (all Bech32.humanReadableCharIsValid humanpart)
         guard (length datapart >= Bech32.checksumLength)
         guard (all (`elem` Bech32.dataCharList) datapart)
         guard (all isUpper alpha || all isLower alpha)
+        guard (Bech32.separatorChar `elem` str)
         pure Bech32
       where
         datapart  = reverse . takeWhile (/= Bech32.separatorChar) . reverse $ str
         humanpart = takeWhile (/= Bech32.separatorChar) str
         alpha = filter isLetter str
 
-    isBase58 = do
+    resembleBase58 = do
         guard (all (`elem` T.unpack (T.decodeUtf8 $ unAlphabet bitcoinAlphabet)) str)
         pure Base58
 
