@@ -18,6 +18,8 @@ import Data.ByteString.Base58
     ( bitcoinAlphabet, decodeBase58, unAlphabet )
 import Data.Char
     ( isHexDigit, isLetter, isLower, isUpper, toLower )
+import Data.Either.Extra
+    ( maybeToEither )
 import Data.Maybe
     ( fromJust )
 import Options.Applicative
@@ -108,9 +110,9 @@ run Cmd{prefix} = do
                 Just Bech32 ->
                     right snd $ left show $ Bech32.decodeLenient source
                 Just Base58 -> do
-                    let maybeToEither = maybe (Left "Invalid Base58-encoded string.") Right
+                    let err = "Invalid Base58-encoded string."
                     let fromBase58 = decodeBase58 bitcoinAlphabet . T.encodeUtf8
-                    dataPartFromBytes <$> maybeToEither (fromBase58 source)
+                    dataPartFromBytes <$> maybeToEither err (fromBase58 source)
                 Nothing ->
                     fail "Unable to detect input encoding. Neither Base16, Bech32 nor Base58."
         B8.putStrLn $ T.encodeUtf8 $ Bech32.encodeLenient hrp datapart

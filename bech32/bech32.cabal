@@ -67,6 +67,7 @@ executable bech32
     , base58-bytestring
     , bech32
     , bytestring
+    , extra
     , memory
     , optparse-applicative
     , text
