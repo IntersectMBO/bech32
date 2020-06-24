@@ -48,7 +48,6 @@ import qualified Data.ByteString.Char8 as B8
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 
-
 main :: IO ()
 main = setup >> parse >>= run
 
@@ -95,11 +94,11 @@ run Cmd{prefix} = do
   where
     runDecode source =
         case Bech32.decodeLenient source of
-          Left err ->
-              fail (show err)
-          Right (_, dataPart) ->
-              B8.putStrLn $ convertToBase BA.Base16 $ fromJust $
-                dataPartToBytes dataPart
+            Left err ->
+                fail (show err)
+            Right (_, dataPart) -> do
+                let base16 = convertToBase BA.Base16
+                B8.putStrLn $ base16 $ fromJust $ dataPartToBytes dataPart
 
     runEncode hrp source = do
         datapart <- either fail pure $
@@ -114,7 +113,8 @@ run Cmd{prefix} = do
                     let fromBase58 = decodeBase58 bitcoinAlphabet . T.encodeUtf8
                     dataPartFromBytes <$> maybeToEither err (fromBase58 source)
                 Nothing ->
-                    fail "Unable to detect input encoding. Neither Base16, Bech32 nor Base58."
+                    fail "Unable to detect input encoding. Neither Base16, \
+                         \Bech32 nor Base58."
         B8.putStrLn $ T.encodeUtf8 $ Bech32.encodeLenient hrp datapart
 
 data Encoding = Base16 | Bech32 | Base58 deriving (Show, Eq)
@@ -144,8 +144,12 @@ detectEncoding str
         alpha = filter isLetter str
 
     resembleBase58 = do
-        guard (all (`elem` T.unpack (T.decodeUtf8 $ unAlphabet bitcoinAlphabet)) str)
+        guard (all isBase58Digit str)
         pure Base58
+      where
+        isBase58Digit :: Char -> Bool
+        isBase58Digit =
+            (`elem` T.unpack (T.decodeUtf8 $ unAlphabet bitcoinAlphabet))
 
 -- NOTE For small string, it can be tricky to tell whether a string is hex
 -- or bech32 encoded. Both could potentially be valid. As the length
