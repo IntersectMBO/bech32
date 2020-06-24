@@ -157,18 +157,18 @@ detectEncoding str
 -- rules gets smaller and smaller.
 --
 -- For example, let's consider the probability for the alphabet to match
--- between bech32 and base16 (which will be bigger than the actual probability
+-- between base16 and base58 (which will be bigger than the actual probability
 -- of both encoding to be valid, since there are additional rules on top of
 -- the alphabet):
 --
---     P_1 = 15/32
+--     P_1 = 16/58
 --
--- Now, the probability that a bech32 string of 16 characters will contain
+-- Now, the probability that a base58 string of 8 characters will contain
 -- only hexadecimal characters is
 --
---     P_16 = P_1 ^ 16 ~ 0.000005
+--     P_8 = P_1 ^ 8 ~ 0.00003
 --
 -- Which can be considered small enough to not happened too frequently. The
--- probability gets worse with Base58 and a bigger alphabet.
+-- probability gets worse with Bech32 which has quite a lot of rules.
 minimalSizeForDetection :: Int
-minimalSizeForDetection = 16
+minimalSizeForDetection = 8

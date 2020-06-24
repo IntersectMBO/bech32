@@ -92,12 +92,15 @@ test-suite bech32-test
       -Werror
   build-depends:
       base
+    , base58-bytestring
     , bech32
     , bytestring
     , containers
     , deepseq
     , extra
     , hspec
+    , memory
+    , process
     , QuickCheck >= 2.12
     , text
     , vector
@@ -106,4 +109,5 @@ test-suite bech32-test
   main-is:
       Main.hs
   other-modules:
+      AppSpec
       Codec.Binary.Bech32Spec
