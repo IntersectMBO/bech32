@@ -28,7 +28,8 @@ import Options.Applicative
     , argument
     , customExecParser
     , eitherReader
-    , help
+    , footerDoc
+    , helpDoc
     , helper
     , info
     , metavar
@@ -38,6 +39,8 @@ import Options.Applicative
     , showHelpOnEmpty
     , (<|>)
     )
+import Options.Applicative.Help.Pretty
+    ( bold, hsep, indent, text, underline, vsep )
 import System.IO
     ( BufferMode (..), Handle, hSetBuffering, stderr, stdin, stdout )
 
@@ -69,7 +72,31 @@ parse = customExecParser (prefs showHelpOnEmpty) parser
   where
     parser :: ParserInfo Cmd
     parser = info (helper <*> cmd) $ mconcat
-        [ progDesc "Simple utility for converting to/from bech32 byte strings."
+        [ progDesc $ unwords
+            [ "Convert to and from bech32 strings."
+            , "Data are read from standard input."
+            ]
+        , footerDoc $ Just $ vsep
+            [ hsep
+                [ text "Supported encoding formats:"
+                , indent 0 $ text  "Base16, Bech32 & Base58."
+                ]
+            , text ""
+            , text "Examples:"
+            , indent 2 $ hsep [underline $ text "To", text "Bech32:"]
+            , indent 4 $ bold $ text "$ bech32 base16_ <<< 706174617465"
+            , indent 4 $ text "base16_1wpshgct5v5r5mxh0"
+            , text ""
+            , indent 4 $ bold $ text "$ bech32 base58_ <<< Ae2tdPwUPEYy"
+            , indent 4 $ text "base58_1p58rejhd9592uusa8pzj2"
+            , text ""
+            , indent 4 $ bold $ text "$ bech32 new_prefix <<< old_prefix1wpshgcg2s33x3"
+            , indent 4 $ text "new_prefix1wpshgcgeak9mv"
+            , text ""
+            , indent 2 $ hsep [underline $ text "From", text "Bech32:"]
+            , indent 4 $ bold $ text "$ bech32 <<< base16_1wpshgct5v5r5mxh0"
+            , indent 4 $ text "706174617465"
+            ]
         ]
 
     cmd :: Parser Cmd
@@ -77,9 +104,17 @@ parse = customExecParser (prefs showHelpOnEmpty) parser
 
 -- | Parse a 'HumanReadablePart' as an argument.
 hrpArgument :: Parser HumanReadablePart
-hrpArgument = argument (eitherReader reader) $ mempty
-    <> metavar "PREFIX"
-    <> help "A human-readable prefix (e.g. 'addr')."
+hrpArgument = argument (eitherReader reader) $ mconcat
+    [ metavar "PREFIX"
+    , helpDoc $ Just $ vsep
+        [ text "An optional human-readable prefix (e.g. 'addr')."
+        , indent 2 $ text
+            "- When provided, the input text is decoded from various encoding \
+            \formats and re-encoded to bech32 using the given prefix."
+        , indent 2 $ text
+            "- When omitted, the input text is decoded from bech32 to base16."
+        ]
+    ]
   where
     reader :: String -> Either String HumanReadablePart
     reader = left show . humanReadablePartFromText . T.pack
