@@ -34,21 +34,31 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 
 spec :: Spec
-spec = describe "bech32 command-line" $ do
-    specEncode base16
-    specEncode (bech32 "bech32")
-    specEncode base58
+spec =
+    describe "bech32 command-line" $ do
+        specDecode
+        specEncode base16
+        specEncode (bech32 "bech32")
+        specEncode base58
 
 -- | Check that, for a given encoder, any encoded string can be decoded and
 -- re-encoded to bech32 using the given prefix.
 specEncode
     :: (String -> String)
     -> Spec
-specEncode encode =
-    prop ("encode property: " <> encode "property") $ \(MinString str) ->
+specEncode encode = prop ("can re-encode encoded strings " <> encode "...") $
+    \(MinString str) ->
         withMaxSuccess 1000 $ monadicIO $ do
             out <- run $ readProcess "bech32" ["prefix"] (encode str)
             assert (init out == bech32 "prefix" str)
+
+-- | Check that any bech32-encoded string can be decoded successfully.
+specDecode :: Spec
+specDecode = prop "any bech32 string can be decoded to hex" $
+    \(MinString str) ->
+        withMaxSuccess 1000 $ monadicIO $ do
+            out <- run $ readProcess "bech32" [] (bech32 "bech32" str)
+            assert (init out == base16 str)
 
 base16 :: String -> String
 base16 = fromUtf8 . convertToBase Base16 . utf8
