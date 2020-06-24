@@ -17,7 +17,7 @@ import Data.ByteArray.Encoding
 import Data.ByteString.Base58
     ( bitcoinAlphabet, decodeBase58, unAlphabet )
 import Data.Char
-    ( isLetter, isLower, isUpper, ord, toLower )
+    ( isHexDigit, isLetter, isLower, isUpper, toLower )
 import Data.Maybe
     ( fromJust )
 import Options.Applicative
@@ -40,6 +40,7 @@ import System.IO
     ( BufferMode (..), Handle, hSetBuffering, stderr, stdin, stdout )
 
 import qualified Codec.Binary.Bech32 as Bech32
+import qualified Codec.Binary.Bech32.Internal as Bech32
 import qualified Data.ByteArray.Encoding as BA
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.Text as T
@@ -118,25 +119,49 @@ data Encoding = Base16 | Bech32 | Base58 deriving (Show, Eq)
 
 -- | Try detecting the encoding of a given 'String'
 detectEncoding :: String -> Maybe Encoding
-detectEncoding str = isBase16 <|> isBech32  <|> isBase58
+detectEncoding str
+    | length str < minimalSizeForDetection = Nothing
+    | otherwise = isBase16 <|> isBech32 <|> isBase58
   where
     isBase16 = do
-        guard (all (`elem` "0123456789abcdef") (toLower <$> str))
+        guard (all isHexDigit (toLower <$> str))
         guard (even (length str))
         pure Base16
 
     isBech32 = do
         guard (not (null humanpart))
-        guard (all (\c -> ord c >= 33 && ord c <= 126) humanpart)
-        guard (length datapart >= 6)
+        guard (all Bech32.humanReadableCharIsValid humanpart)
+        guard (length datapart >= Bech32.checksumLength)
         guard (all (`elem` Bech32.dataCharList) datapart)
         guard (all isUpper alpha || all isLower alpha)
         pure Bech32
       where
-        datapart  = reverse . takeWhile (/= '1') . reverse $ str
-        humanpart = takeWhile (/= '1') str
+        datapart  = reverse . takeWhile (/= Bech32.separatorChar) . reverse $ str
+        humanpart = takeWhile (/= Bech32.separatorChar) str
         alpha = filter isLetter str
 
     isBase58 = do
         guard (all (`elem` T.unpack (T.decodeUtf8 $ unAlphabet bitcoinAlphabet)) str)
         pure Base58
+
+-- NOTE For small string, it can be tricky to tell whether a string is hex
+-- or bech32 encoded. Both could potentially be valid. As the length
+-- increases, the probability for a string to satisfy all three encoding
+-- rules gets smaller and smaller.
+--
+-- For example, let's consider the probability for the alphabet to match
+-- between bech32 and base16 (which will be bigger than the actual probability
+-- of both encoding to be valid, since there are additional rules on top of
+-- the alphabet):
+--
+--     P_1 = 15/32
+--
+-- Now, the probability that a bech32 string of 16 characters will contain
+-- only hexadecimal characters is
+--
+--     P_16 = P_1 ^ 16 ~ 0.000005
+--
+-- Which can be considered small enough to not happened too frequently. The
+-- probability gets worse with Base58 and a bigger alphabet.
+minimalSizeForDetection :: Int
+minimalSizeForDetection = 16
