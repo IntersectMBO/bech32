@@ -1,6 +1,7 @@
 <a href="https://hackage.haskell.org/package/bech32"><img src="https://img.shields.io/hackage/v/bech32?style=for-the-badge" /></a>
 <a href="https://github.com/input-output-hk/bech32/releases"><img src="https://img.shields.io/github/release/input-output-hk/bech32.svg?style=for-the-badge" /></a>
-<a href="https://travis-ci.org/input-output-hk/bech32"><img src="https://img.shields.io/travis/input-output-hk/bech32/master.svg?label=BUILD&style=for-the-badge"/></a>
+<a href='https://github.com/input-output-hk/bech32/actions?query=workflow%3A"Continuous Integration"'><img src="https://img.shields.io/github/workflow/status/input-output-hk/bech32/Continuous Integration?style=for-the-badge" /></a>
+<a href="https://input-output-hk.github.io/bech32/coverage/hpc_index.html"><img src="https://input-output-hk.github.io/bech32/coverage/badge.svg" /></a>
 
 ## Bech32 Haskell Libraries
 
