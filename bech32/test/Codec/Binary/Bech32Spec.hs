@@ -146,14 +146,14 @@ spec = do
                         "no invalid characters"
                     $ cover 10 (not isValid)
                         "one or more invalid characters"
-                    $ if
-                    | isValid ->
+                    $ if isValid then
                         fmap humanReadablePartToText
                             (humanReadablePartFromText hrp)
                             `shouldBe` Right (T.toLower hrp)
-                    | otherwise ->
+                       else
                         humanReadablePartFromText hrp
                             `shouldBe` Left invalidError
+
 
         it "Lengths are checked correctly." $
             property $ \(HumanReadablePartWithSuspiciousLength hrp) ->
