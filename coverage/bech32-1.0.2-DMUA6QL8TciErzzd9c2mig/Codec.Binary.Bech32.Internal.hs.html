@@ -1,0 +1,942 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE DataKinds #-}
+<span class="lineno">    2 </span>{-# LANGUAGE DerivingStrategies #-}
+<span class="lineno">    3 </span>{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+<span class="lineno">    4 </span>{-# LANGUAGE LambdaCase #-}
+<span class="lineno">    5 </span>{-# LANGUAGE TypeFamilies #-}
+<span class="lineno">    6 </span>{-# LANGUAGE UndecidableInstances #-}
+<span class="lineno">    7 </span>
+<span class="lineno">    8 </span>-- |
+<span class="lineno">    9 </span>-- Copyright: © 2017 Marko Bencun, 2019-2020 IOHK
+<span class="lineno">   10 </span>-- License: Apache-2.0
+<span class="lineno">   11 </span>--
+<span class="lineno">   12 </span>-- Implementation of the [Bech32]
+<span class="lineno">   13 </span>-- (https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki)
+<span class="lineno">   14 </span>-- address format.
+<span class="lineno">   15 </span>--
+<span class="lineno">   16 </span>-- From an original implementation by Marko Bencun:
+<span class="lineno">   17 </span>--
+<span class="lineno">   18 </span>-- [sipa/bech32](https://git.io/fj8FV)
+<span class="lineno">   19 </span>--
+<span class="lineno">   20 </span>module Codec.Binary.Bech32.Internal
+<span class="lineno">   21 </span>    (
+<span class="lineno">   22 </span>      -- * Encoding &amp; Decoding
+<span class="lineno">   23 </span>      encode
+<span class="lineno">   24 </span>    , encodeLenient
+<span class="lineno">   25 </span>    , EncodingError (..)
+<span class="lineno">   26 </span>    , decode
+<span class="lineno">   27 </span>    , decodeLenient
+<span class="lineno">   28 </span>    , DecodingError (..)
+<span class="lineno">   29 </span>    , checksumLength
+<span class="lineno">   30 </span>    , encodedStringMaxLength
+<span class="lineno">   31 </span>    , encodedStringMinLength
+<span class="lineno">   32 </span>    , separatorChar
+<span class="lineno">   33 </span>    , separatorLength
+<span class="lineno">   34 </span>
+<span class="lineno">   35 </span>      -- * Data Part
+<span class="lineno">   36 </span>    , DataPart
+<span class="lineno">   37 </span>    , dataPartIsValid
+<span class="lineno">   38 </span>    , dataPartFromBytes
+<span class="lineno">   39 </span>    , dataPartFromText
+<span class="lineno">   40 </span>    , dataPartFromWords
+<span class="lineno">   41 </span>    , dataPartToBytes
+<span class="lineno">   42 </span>    , dataPartToText
+<span class="lineno">   43 </span>    , dataPartToWords
+<span class="lineno">   44 </span>    , dataCharToWord
+<span class="lineno">   45 </span>    , dataCharFromWord
+<span class="lineno">   46 </span>    , dataCharList
+<span class="lineno">   47 </span>
+<span class="lineno">   48 </span>      -- * Human-Readable Part
+<span class="lineno">   49 </span>    , HumanReadablePart
+<span class="lineno">   50 </span>    , HumanReadablePartError (..)
+<span class="lineno">   51 </span>    , humanReadablePartFromText
+<span class="lineno">   52 </span>    , humanReadablePartToText
+<span class="lineno">   53 </span>    , humanReadablePartToWords
+<span class="lineno">   54 </span>    , humanReadablePartMinLength
+<span class="lineno">   55 </span>    , humanReadablePartMaxLength
+<span class="lineno">   56 </span>    , humanReadableCharIsValid
+<span class="lineno">   57 </span>    , humanReadableCharMinBound
+<span class="lineno">   58 </span>    , humanReadableCharMaxBound
+<span class="lineno">   59 </span>
+<span class="lineno">   60 </span>      -- * Bit Manipulation
+<span class="lineno">   61 </span>    , convertBits
+<span class="lineno">   62 </span>    , Word5
+<span class="lineno">   63 </span>    , word5
+<span class="lineno">   64 </span>    , getWord5
+<span class="lineno">   65 </span>    , toBase256
+<span class="lineno">   66 </span>    , toBase32
+<span class="lineno">   67 </span>    , noPadding
+<span class="lineno">   68 </span>    , yesPadding
+<span class="lineno">   69 </span>
+<span class="lineno">   70 </span>      -- * Character Manipulation
+<span class="lineno">   71 </span>    , CharPosition (..)
+<span class="lineno">   72 </span>
+<span class="lineno">   73 </span>    ) where
+<span class="lineno">   74 </span>
+<span class="lineno">   75 </span>import Prelude
+<span class="lineno">   76 </span>
+<span class="lineno">   77 </span>import Control.Exception
+<span class="lineno">   78 </span>    ( Exception )
+<span class="lineno">   79 </span>import Control.Monad
+<span class="lineno">   80 </span>    ( guard, join )
+<span class="lineno">   81 </span>import Data.Array
+<span class="lineno">   82 </span>    ( Array )
+<span class="lineno">   83 </span>import Data.Bifunctor
+<span class="lineno">   84 </span>    ( first )
+<span class="lineno">   85 </span>import Data.Bits
+<span class="lineno">   86 </span>    ( Bits, testBit, unsafeShiftL, unsafeShiftR, xor, (.&amp;.), (.|.) )
+<span class="lineno">   87 </span>import Data.ByteString
+<span class="lineno">   88 </span>    ( ByteString )
+<span class="lineno">   89 </span>import Data.Char
+<span class="lineno">   90 </span>    ( chr, ord, toLower, toUpper )
+<span class="lineno">   91 </span>import Data.Either.Extra
+<span class="lineno">   92 </span>    ( maybeToEither )
+<span class="lineno">   93 </span>import Data.Foldable
+<span class="lineno">   94 </span>    ( foldl' )
+<span class="lineno">   95 </span>import Data.Functor.Identity
+<span class="lineno">   96 </span>    ( Identity, runIdentity )
+<span class="lineno">   97 </span>import Data.Ix
+<span class="lineno">   98 </span>    ( Ix (..) )
+<span class="lineno">   99 </span>import Data.List
+<span class="lineno">  100 </span>    ( sort )
+<span class="lineno">  101 </span>import Data.Map.Strict
+<span class="lineno">  102 </span>    ( Map )
+<span class="lineno">  103 </span>import Data.Maybe
+<span class="lineno">  104 </span>    ( isNothing, mapMaybe )
+<span class="lineno">  105 </span>import Data.Text
+<span class="lineno">  106 </span>    ( Text )
+<span class="lineno">  107 </span>import Data.Word
+<span class="lineno">  108 </span>    ( Word8 )
+<span class="lineno">  109 </span>
+<span class="lineno">  110 </span>import qualified Data.Array as Arr
+<span class="lineno">  111 </span>import qualified Data.ByteString as BS
+<span class="lineno">  112 </span>import qualified Data.Map.Strict as Map
+<span class="lineno">  113 </span>import qualified Data.Text as T
+<span class="lineno">  114 </span>
+<span class="lineno">  115 </span>{-------------------------------------------------------------------------------
+<span class="lineno">  116 </span>                                 Data Part
+<span class="lineno">  117 </span>-------------------------------------------------------------------------------}
+<span class="lineno">  118 </span>
+<span class="lineno">  119 </span>-- | Represents the data part of a Bech32 string, as defined here:
+<span class="lineno">  120 </span>--   https://git.io/fj8FS
+<span class="lineno">  121 </span>newtype DataPart = DataPart Text
+<span class="lineno">  122 </span>    deriving newtype (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Monoid</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Semigroup</span></span></span></span></span></span>)
+<span class="lineno">  123 </span>    deriving stock <span class="decl"><span class="nottickedoff">Show</span></span>
+<span class="lineno">  124 </span>
+<span class="lineno">  125 </span>-- | Returns true iff. the specified 'DataPart' is valid.
+<span class="lineno">  126 </span>--
+<span class="lineno">  127 </span>dataPartIsValid :: DataPart -&gt; Bool
+<span class="lineno">  128 </span><span class="decl"><span class="istickedoff">dataPartIsValid (DataPart dp) = T.all dataCharIsValid dp</span></span>
+<span class="lineno">  129 </span>
+<span class="lineno">  130 </span>-- | Constructs a 'DataPart' from a 'ByteString'.
+<span class="lineno">  131 </span>--
+<span class="lineno">  132 </span>-- This function encodes a 'ByteString' in such a way that guarantees it can be
+<span class="lineno">  133 </span>-- successfully decoded with the 'dataPartToBytes' function:
+<span class="lineno">  134 </span>--
+<span class="lineno">  135 </span>-- &gt; dataPartToBytes (dataPartFromBytes b) == Just b
+<span class="lineno">  136 </span>--
+<span class="lineno">  137 </span>dataPartFromBytes :: ByteString -&gt; DataPart
+<span class="lineno">  138 </span><span class="decl"><span class="istickedoff">dataPartFromBytes =</span>
+<span class="lineno">  139 </span><span class="spaces">    </span><span class="istickedoff">DataPart . T.pack . fmap dataCharFromWord . toBase32 . BS.unpack</span></span>
+<span class="lineno">  140 </span>
+<span class="lineno">  141 </span>-- | Attempts to extract a 'ByteString' from a 'DataPart'.
+<span class="lineno">  142 </span>--
+<span class="lineno">  143 </span>-- This function guarantees to satisfy the following property:
+<span class="lineno">  144 </span>--
+<span class="lineno">  145 </span>-- &gt; dataPartToBytes (dataPartFromBytes b) == Just b
+<span class="lineno">  146 </span>--
+<span class="lineno">  147 </span>dataPartToBytes :: DataPart -&gt; Maybe ByteString
+<span class="lineno">  148 </span><span class="decl"><span class="istickedoff">dataPartToBytes dp = BS.pack &lt;$&gt;</span>
+<span class="lineno">  149 </span><span class="spaces">    </span><span class="istickedoff">(toBase256 =&lt;&lt; traverse dataCharToWord (T.unpack $ dataPartToText dp))</span></span>
+<span class="lineno">  150 </span>
+<span class="lineno">  151 </span>-- | Constructs a 'DataPart' from textual input.
+<span class="lineno">  152 </span>--
+<span class="lineno">  153 </span>-- All characters in the input must be a member of 'dataCharList', the set of
+<span class="lineno">  154 </span>-- characters permitted to appear within the data part of a Bech32 string.
+<span class="lineno">  155 </span>--
+<span class="lineno">  156 </span>-- Returns 'Nothing' if any character in the input is not a member of
+<span class="lineno">  157 </span>-- 'dataCharList'.
+<span class="lineno">  158 </span>--
+<span class="lineno">  159 </span>-- This function guarantees to satisfy the following property:
+<span class="lineno">  160 </span>--
+<span class="lineno">  161 </span>-- &gt; dataPartFromText (dataPartToText d) == Just d
+<span class="lineno">  162 </span>--
+<span class="lineno">  163 </span>dataPartFromText :: Text -&gt; Maybe DataPart
+<span class="lineno">  164 </span><span class="decl"><span class="istickedoff">dataPartFromText text</span>
+<span class="lineno">  165 </span><span class="spaces">    </span><span class="istickedoff">| <span class="tickonlyfalse">T.any (not . dataCharIsValid) textLower</span> = <span class="nottickedoff">Nothing</span></span>
+<span class="lineno">  166 </span><span class="spaces">    </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = pure $ DataPart textLower</span>
+<span class="lineno">  167 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  168 </span><span class="spaces">    </span><span class="istickedoff">textLower = T.toLower text</span></span>
+<span class="lineno">  169 </span>
+<span class="lineno">  170 </span>-- | Converts a 'DataPart' to 'Text', using the Bech32 character set to render
+<span class="lineno">  171 </span>--   the data.
+<span class="lineno">  172 </span>--
+<span class="lineno">  173 </span>-- This function guarantees to satisfy the following property:
+<span class="lineno">  174 </span>--
+<span class="lineno">  175 </span>-- &gt; dataPartFromText (dataPartToText d) == Just d
+<span class="lineno">  176 </span>--
+<span class="lineno">  177 </span>dataPartToText :: DataPart -&gt; Text
+<span class="lineno">  178 </span><span class="decl"><span class="istickedoff">dataPartToText (DataPart t) = t</span></span>
+<span class="lineno">  179 </span>
+<span class="lineno">  180 </span>-- | Construct a 'DataPart' directly from a list of words.
+<span class="lineno">  181 </span>--
+<span class="lineno">  182 </span>-- This function guarantees to satisfy the following properties:
+<span class="lineno">  183 </span>--
+<span class="lineno">  184 </span>-- &gt; dataPartFromWords (dataPartToWords d) == d
+<span class="lineno">  185 </span>-- &gt; dataPartToWords (dataPartFromWords w) == w
+<span class="lineno">  186 </span>--
+<span class="lineno">  187 </span>dataPartFromWords :: [Word5] -&gt; DataPart
+<span class="lineno">  188 </span><span class="decl"><span class="istickedoff">dataPartFromWords = DataPart . T.pack . fmap dataCharFromWord</span></span>
+<span class="lineno">  189 </span>
+<span class="lineno">  190 </span>-- | Unpack a 'DataPart' into a list of its constituent words.
+<span class="lineno">  191 </span>--
+<span class="lineno">  192 </span>-- This function guarantees to satisfy the following properties:
+<span class="lineno">  193 </span>--
+<span class="lineno">  194 </span>-- &gt; dataPartFromWords (dataPartToWords d) == d
+<span class="lineno">  195 </span>-- &gt; dataPartToWords (dataPartFromWords w) == w
+<span class="lineno">  196 </span>---
+<span class="lineno">  197 </span>dataPartToWords :: DataPart -&gt; [Word5]
+<span class="lineno">  198 </span><span class="decl"><span class="istickedoff">dataPartToWords = mapMaybe dataCharToWord . T.unpack . dataPartToText</span></span>
+<span class="lineno">  199 </span>
+<span class="lineno">  200 </span>-- | Returns true iff. the specified character is permitted to appear within
+<span class="lineno">  201 </span>--   the data part of a Bech32 string.
+<span class="lineno">  202 </span>--
+<span class="lineno">  203 </span>-- See here for more details: https://git.io/fj8FS
+<span class="lineno">  204 </span>--
+<span class="lineno">  205 </span>dataCharIsValid :: Char -&gt; Bool
+<span class="lineno">  206 </span><span class="decl"><span class="istickedoff">dataCharIsValid = (`Map.member` dataCharToWordMap)</span></span>
+<span class="lineno">  207 </span>
+<span class="lineno">  208 </span>-- | A list of all characters that are permitted to appear within the data part
+<span class="lineno">  209 </span>--   of a Bech32 string.
+<span class="lineno">  210 </span>--
+<span class="lineno">  211 </span>-- See here for more details: https://git.io/fj8FS
+<span class="lineno">  212 </span>--
+<span class="lineno">  213 </span>dataCharList :: String
+<span class="lineno">  214 </span><span class="decl"><span class="istickedoff">dataCharList = &quot;qpzry9x8gf2tvdw0s3jn54khce6mua7l&quot;</span></span>
+<span class="lineno">  215 </span>
+<span class="lineno">  216 </span>-- | If the specified character is permitted to appear within the data part
+<span class="lineno">  217 </span>--   of a Bech32 string, this function returns that character's corresponding
+<span class="lineno">  218 </span>--   'Word5' value. If the specified character is not permitted, or if the
+<span class="lineno">  219 </span>--   specified character is upper-case, returns 'Nothing'.
+<span class="lineno">  220 </span>dataCharToWord :: Char -&gt; Maybe Word5
+<span class="lineno">  221 </span><span class="decl"><span class="istickedoff">dataCharToWord = (`Map.lookup` dataCharToWordMap)</span></span>
+<span class="lineno">  222 </span>
+<span class="lineno">  223 </span>dataCharToWordMap :: Map Char Word5
+<span class="lineno">  224 </span><span class="decl"><span class="istickedoff">dataCharToWordMap = Map.fromList $ dataCharList `zip` [minBound .. maxBound]</span></span>
+<span class="lineno">  225 </span>
+<span class="lineno">  226 </span>-- | Maps the specified 'Word5' onto a character that is permitted to appear
+<span class="lineno">  227 </span>--   within the data part of a Bech32 string.
+<span class="lineno">  228 </span>dataCharFromWord :: Word5 -&gt; Char
+<span class="lineno">  229 </span><span class="decl"><span class="istickedoff">dataCharFromWord = (dataCharFromWordArray Arr.!)</span></span>
+<span class="lineno">  230 </span>
+<span class="lineno">  231 </span>dataCharFromWordArray :: Array Word5 Char
+<span class="lineno">  232 </span><span class="decl"><span class="istickedoff">dataCharFromWordArray = Arr.listArray (minBound, maxBound) dataCharList</span></span>
+<span class="lineno">  233 </span>
+<span class="lineno">  234 </span>{-------------------------------------------------------------------------------
+<span class="lineno">  235 </span>                            Human Readable Part
+<span class="lineno">  236 </span>-------------------------------------------------------------------------------}
+<span class="lineno">  237 </span>
+<span class="lineno">  238 </span>-- | Represents the human-readable part of a Bech32 string, as defined here:
+<span class="lineno">  239 </span>--   https://git.io/fj8FS
+<span class="lineno">  240 </span>newtype HumanReadablePart = HumanReadablePart Text
+<span class="lineno">  241 </span>    deriving newtype (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Monoid</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Semigroup</span></span></span></span></span></span>)
+<span class="lineno">  242 </span>    deriving stock <span class="decl"><span class="istickedoff">Show</span></span>
+<span class="lineno">  243 </span>
+<span class="lineno">  244 </span>-- | Parses the human-readable part of a Bech32 string, as defined here:
+<span class="lineno">  245 </span>--   https://git.io/fj8FS
+<span class="lineno">  246 </span>humanReadablePartFromText
+<span class="lineno">  247 </span>    :: Text -&gt; Either HumanReadablePartError HumanReadablePart
+<span class="lineno">  248 </span><span class="decl"><span class="istickedoff">humanReadablePartFromText hrp</span>
+<span class="lineno">  249 </span><span class="spaces">    </span><span class="istickedoff">| T.length hrp &lt; humanReadablePartMinLength =</span>
+<span class="lineno">  250 </span><span class="spaces">        </span><span class="istickedoff">Left HumanReadablePartTooShort</span>
+<span class="lineno">  251 </span><span class="spaces">    </span><span class="istickedoff">| T.length hrp &gt; humanReadablePartMaxLength =</span>
+<span class="lineno">  252 </span><span class="spaces">        </span><span class="istickedoff">Left HumanReadablePartTooLong</span>
+<span class="lineno">  253 </span><span class="spaces">    </span><span class="istickedoff">| not (null invalidCharPositions) =</span>
+<span class="lineno">  254 </span><span class="spaces">        </span><span class="istickedoff">Left $ HumanReadablePartContainsInvalidChars invalidCharPositions</span>
+<span class="lineno">  255 </span><span class="spaces">    </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> =</span>
+<span class="lineno">  256 </span><span class="spaces">        </span><span class="istickedoff">Right $ HumanReadablePart $ T.toLower hrp</span>
+<span class="lineno">  257 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  258 </span><span class="spaces">    </span><span class="istickedoff">invalidCharPositions = CharPosition . fst &lt;$&gt; filter</span>
+<span class="lineno">  259 </span><span class="spaces">        </span><span class="istickedoff">((not . humanReadableCharIsValid) . snd) ([0 .. ] `zip` T.unpack hrp)</span></span>
+<span class="lineno">  260 </span>
+<span class="lineno">  261 </span>-- | Represents the set of error conditions that may occur while parsing the
+<span class="lineno">  262 </span>--   human-readable part of a Bech32 string.
+<span class="lineno">  263 </span>data HumanReadablePartError
+<span class="lineno">  264 </span>    = HumanReadablePartTooShort
+<span class="lineno">  265 </span>      -- ^ The human-readable part is /shorter than/
+<span class="lineno">  266 </span>      -- 'humanReadablePartMinLength'.
+<span class="lineno">  267 </span>    | HumanReadablePartTooLong
+<span class="lineno">  268 </span>      -- ^ The human-readable part is /longer than/
+<span class="lineno">  269 </span>      -- 'humanReadablePartMaxLength'.
+<span class="lineno">  270 </span>    | HumanReadablePartContainsInvalidChars [CharPosition]
+<span class="lineno">  271 </span>      -- ^ The human-readable part contains one or more characters whose values
+<span class="lineno">  272 </span>      -- are /less than/ 'humanReadableCharMinBound' or /greater than/
+<span class="lineno">  273 </span>      -- 'humanReadableCharMaxBound'.
+<span class="lineno">  274 </span>    deriving (<span class="decl"><span class="istickedoff">Eq</span></span>, <span class="decl"><span class="istickedoff">Show</span></span>)
+<span class="lineno">  275 </span>
+<span class="lineno">  276 </span>instance Exception HumanReadablePartError
+<span class="lineno">  277 </span>
+<span class="lineno">  278 </span>-- | Get the raw text of the human-readable part of a Bech32 string.
+<span class="lineno">  279 </span>humanReadablePartToText :: HumanReadablePart -&gt; Text
+<span class="lineno">  280 </span><span class="decl"><span class="istickedoff">humanReadablePartToText (HumanReadablePart t) = t</span></span>
+<span class="lineno">  281 </span>
+<span class="lineno">  282 </span>-- | Convert the specified human-readable part to a list of words.
+<span class="lineno">  283 </span>humanReadablePartToWords :: HumanReadablePart -&gt; [Word5]
+<span class="lineno">  284 </span><span class="decl"><span class="istickedoff">humanReadablePartToWords (HumanReadablePart hrp) =</span>
+<span class="lineno">  285 </span><span class="spaces">    </span><span class="istickedoff">map (Word5 . (.&gt;&gt;. 5)) (fromIntegral . ord &lt;$&gt; T.unpack hrp)</span>
+<span class="lineno">  286 </span><span class="spaces">        </span><span class="istickedoff">++ [Word5 0]</span>
+<span class="lineno">  287 </span><span class="spaces">        </span><span class="istickedoff">++ map word5 (ord &lt;$&gt; T.unpack hrp)</span></span>
+<span class="lineno">  288 </span>
+<span class="lineno">  289 </span>-- | The shortest length permitted for the human-readable part of a Bech32
+<span class="lineno">  290 </span>--   string.
+<span class="lineno">  291 </span>humanReadablePartMinLength :: Int
+<span class="lineno">  292 </span><span class="decl"><span class="istickedoff">humanReadablePartMinLength = 1</span></span>
+<span class="lineno">  293 </span>
+<span class="lineno">  294 </span>-- | The longest length permitted for the human-readable part of a Bech32
+<span class="lineno">  295 </span>--   string.
+<span class="lineno">  296 </span>humanReadablePartMaxLength :: Int
+<span class="lineno">  297 </span><span class="decl"><span class="istickedoff">humanReadablePartMaxLength = 83</span></span>
+<span class="lineno">  298 </span>
+<span class="lineno">  299 </span>-- | Returns true iff. the specified character is permitted to appear
+<span class="lineno">  300 </span>--   within the human-readable part of a Bech32 string.
+<span class="lineno">  301 </span>humanReadableCharIsValid :: Char -&gt; Bool
+<span class="lineno">  302 </span><span class="decl"><span class="istickedoff">humanReadableCharIsValid c =</span>
+<span class="lineno">  303 </span><span class="spaces">    </span><span class="istickedoff">c &gt;= humanReadableCharMinBound &amp;&amp;</span>
+<span class="lineno">  304 </span><span class="spaces">    </span><span class="istickedoff">c &lt;= humanReadableCharMaxBound</span></span>
+<span class="lineno">  305 </span>
+<span class="lineno">  306 </span>-- | The lower bound of the set of characters permitted to appear within the
+<span class="lineno">  307 </span>--   human-readable part of a Bech32 string.
+<span class="lineno">  308 </span>humanReadableCharMinBound :: Char
+<span class="lineno">  309 </span><span class="decl"><span class="istickedoff">humanReadableCharMinBound = chr 33</span></span>
+<span class="lineno">  310 </span>
+<span class="lineno">  311 </span>-- | The upper bound of the set of characters permitted to appear within the
+<span class="lineno">  312 </span>--   human-readable part of a Bech32 string.
+<span class="lineno">  313 </span>humanReadableCharMaxBound :: Char
+<span class="lineno">  314 </span><span class="decl"><span class="istickedoff">humanReadableCharMaxBound = chr 126</span></span>
+<span class="lineno">  315 </span>
+<span class="lineno">  316 </span>{-------------------------------------------------------------------------------
+<span class="lineno">  317 </span>                            Encoding &amp; Decoding
+<span class="lineno">  318 </span>-------------------------------------------------------------------------------}
+<span class="lineno">  319 </span>
+<span class="lineno">  320 </span>-- | Like 'encode' but allows output to be longer than 90 characters.
+<span class="lineno">  321 </span>--
+<span class="lineno">  322 </span>-- This isn't ideal, as Bech32 error detection becomes worse as strings get
+<span class="lineno">  323 </span>-- longer, but it may be useful in certain circumstances.
+<span class="lineno">  324 </span>--
+<span class="lineno">  325 </span>-- From [BIP-0173](https://en.bitcoin.it/wiki/BIP_0173):
+<span class="lineno">  326 </span>--
+<span class="lineno">  327 </span>--     &quot;Even though the chosen code performs reasonably well up to 1023
+<span class="lineno">  328 </span>--     characters, other designs are preferable for lengths above 89
+<span class="lineno">  329 </span>--     characters (excluding the separator).&quot;
+<span class="lineno">  330 </span>--
+<span class="lineno">  331 </span>encodeLenient :: HumanReadablePart -&gt; DataPart -&gt; Text
+<span class="lineno">  332 </span><span class="decl"><span class="istickedoff">encodeLenient hrp dp = humanReadablePartToText hrp</span>
+<span class="lineno">  333 </span><span class="spaces">    </span><span class="istickedoff">&lt;&gt; T.singleton separatorChar</span>
+<span class="lineno">  334 </span><span class="spaces">    </span><span class="istickedoff">&lt;&gt; T.pack dcp</span>
+<span class="lineno">  335 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  336 </span><span class="spaces">    </span><span class="istickedoff">dcp = dataCharFromWord &lt;$&gt; dataPartToWords dp &lt;&gt; createChecksum hrp dp</span></span>
+<span class="lineno">  337 </span>
+<span class="lineno">  338 </span>-- | Encode a Bech32 string from a human-readable prefix and data payload.
+<span class="lineno">  339 </span>--
+<span class="lineno">  340 </span>-- == Example
+<span class="lineno">  341 </span>--
+<span class="lineno">  342 </span>-- &gt;&gt;&gt; import Prelude
+<span class="lineno">  343 </span>-- &gt;&gt;&gt; import Codec.Binary.Bech32
+<span class="lineno">  344 </span>-- &gt;&gt;&gt; import Data.Text.Encoding
+<span class="lineno">  345 </span>--
+<span class="lineno">  346 </span>-- First, prepare a human-readable prefix:
+<span class="lineno">  347 </span>--
+<span class="lineno">  348 </span>-- &gt;&gt;&gt; Right prefix = humanReadablePartFromText &quot;example&quot;
+<span class="lineno">  349 </span>--
+<span class="lineno">  350 </span>-- Next, prepare a data payload:
+<span class="lineno">  351 </span>--
+<span class="lineno">  352 </span>-- &gt;&gt;&gt; messageToEncode = &quot;Lorem ipsum dolor sit amet!&quot;
+<span class="lineno">  353 </span>-- &gt;&gt;&gt; dataPart = dataPartFromBytes $ encodeUtf8 messageToEncode
+<span class="lineno">  354 </span>--
+<span class="lineno">  355 </span>-- Finally, produce a Bech32 string:
+<span class="lineno">  356 </span>--
+<span class="lineno">  357 </span>-- &gt;&gt;&gt; encode prefix dataPart
+<span class="lineno">  358 </span>-- Right &quot;example1f3hhyetdyp5hqum4d5sxgmmvdaezqumfwssxzmt9wsss9un3cx&quot;
+<span class="lineno">  359 </span>--
+<span class="lineno">  360 </span>encode :: HumanReadablePart -&gt; DataPart -&gt; Either EncodingError Text
+<span class="lineno">  361 </span><span class="decl"><span class="istickedoff">encode hrp dp</span>
+<span class="lineno">  362 </span><span class="spaces">    </span><span class="istickedoff">| T.length result &gt; encodedStringMaxLength = Left EncodedStringTooLong</span>
+<span class="lineno">  363 </span><span class="spaces">    </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = pure result</span>
+<span class="lineno">  364 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  365 </span><span class="spaces">    </span><span class="istickedoff">result = encodeLenient hrp dp</span></span>
+<span class="lineno">  366 </span>
+<span class="lineno">  367 </span>-- | Represents the set of error conditions that may occur while encoding a
+<span class="lineno">  368 </span>--   Bech32 string.
+<span class="lineno">  369 </span>data EncodingError =
+<span class="lineno">  370 </span>    EncodedStringTooLong
+<span class="lineno">  371 </span>    -- ^ The resultant encoded string would be /longer than/
+<span class="lineno">  372 </span>    -- 'encodedStringMaxLength'.
+<span class="lineno">  373 </span>    deriving (<span class="decl"><span class="istickedoff">Eq</span></span>, <span class="decl"><span class="nottickedoff">Show</span></span>)
+<span class="lineno">  374 </span>
+<span class="lineno">  375 </span>-- | Like 'decode' but does not enforce a maximum length.
+<span class="lineno">  376 </span>--
+<span class="lineno">  377 </span>-- See also 'encodeLenient' for details.
+<span class="lineno">  378 </span>decodeLenient :: Text -&gt; Either DecodingError (HumanReadablePart, DataPart)
+<span class="lineno">  379 </span><span class="decl"><span class="istickedoff">decodeLenient bech32 = do</span>
+<span class="lineno">  380 </span><span class="spaces">    </span><span class="istickedoff">guardE (T.length bech32 &gt;= encodedStringMinLength) StringToDecodeTooShort</span>
+<span class="lineno">  381 </span><span class="spaces">    </span><span class="istickedoff">guardE (T.map toUpper bech32 == bech32 || T.map toLower bech32 == bech32)</span>
+<span class="lineno">  382 </span><span class="spaces">        </span><span class="istickedoff">StringToDecodeHasMixedCase</span>
+<span class="lineno">  383 </span><span class="spaces">    </span><span class="istickedoff">(hrpUnparsed, dcpUnparsed) &lt;-</span>
+<span class="lineno">  384 </span><span class="spaces">        </span><span class="istickedoff">maybeToEither StringToDecodeMissingSeparatorChar $</span>
+<span class="lineno">  385 </span><span class="spaces">            </span><span class="istickedoff">splitAtLastOccurrence separatorChar $ T.map toLower bech32</span>
+<span class="lineno">  386 </span><span class="spaces">    </span><span class="istickedoff">hrp &lt;- first humanReadablePartError $ humanReadablePartFromText hrpUnparsed</span>
+<span class="lineno">  387 </span><span class="spaces">    </span><span class="istickedoff">dcp &lt;- first</span>
+<span class="lineno">  388 </span><span class="spaces">        </span><span class="istickedoff">(StringToDecodeContainsInvalidChars . fmap</span>
+<span class="lineno">  389 </span><span class="spaces">            </span><span class="istickedoff">(\(CharPosition p) -&gt;</span>
+<span class="lineno">  390 </span><span class="spaces">                </span><span class="istickedoff">CharPosition $ p + T.length hrpUnparsed + separatorLength))</span>
+<span class="lineno">  391 </span><span class="spaces">        </span><span class="istickedoff">(parseDataWithChecksumPart dcpUnparsed)</span>
+<span class="lineno">  392 </span><span class="spaces">    </span><span class="istickedoff">guardE (length dcp &gt;= checksumLength) StringToDecodeTooShort</span>
+<span class="lineno">  393 </span><span class="spaces">    </span><span class="istickedoff">guardE (verifyChecksum hrp dcp) $</span>
+<span class="lineno">  394 </span><span class="spaces">        </span><span class="istickedoff">StringToDecodeContainsInvalidChars $ findErrorPositions hrp dcp</span>
+<span class="lineno">  395 </span><span class="spaces">    </span><span class="istickedoff">let dp = dataPartFromWords $ take (length dcp - checksumLength) dcp</span>
+<span class="lineno">  396 </span><span class="spaces">    </span><span class="istickedoff">return (hrp, dp)</span>
+<span class="lineno">  397 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  398 </span><span class="spaces">    </span><span class="istickedoff">-- Use properties of the checksum algorithm to find the locations of errors</span>
+<span class="lineno">  399 </span><span class="spaces">    </span><span class="istickedoff">-- within the human-readable part and data-with-checksum part.</span>
+<span class="lineno">  400 </span><span class="spaces">    </span><span class="istickedoff">findErrorPositions :: HumanReadablePart -&gt; [Word5] -&gt; [CharPosition]</span>
+<span class="lineno">  401 </span><span class="spaces">    </span><span class="istickedoff">findErrorPositions hrp dcp</span>
+<span class="lineno">  402 </span><span class="spaces">        </span><span class="istickedoff">| <span class="tickonlyfalse">residue == 0</span> = <span class="nottickedoff">[]</span></span>
+<span class="lineno">  403 </span><span class="spaces">        </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = sort $ toCharPosition &lt;$&gt; errorPositionsIgnoringSeparator</span>
+<span class="lineno">  404 </span><span class="spaces">      </span><span class="istickedoff">where</span>
+<span class="lineno">  405 </span><span class="spaces">        </span><span class="istickedoff">residue = polymod (humanReadablePartToWords hrp ++ dcp) `xor` 1</span>
+<span class="lineno">  406 </span><span class="spaces">        </span><span class="istickedoff">toCharPosition i</span>
+<span class="lineno">  407 </span><span class="spaces">            </span><span class="istickedoff">| i &lt; T.length (humanReadablePartToText hrp) = CharPosition i</span>
+<span class="lineno">  408 </span><span class="spaces">            </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = CharPosition $ i + separatorLength</span>
+<span class="lineno">  409 </span><span class="spaces">        </span><span class="istickedoff">errorPositionsIgnoringSeparator =</span>
+<span class="lineno">  410 </span><span class="spaces">            </span><span class="istickedoff">(T.length bech32 - separatorLength - 1 - ) &lt;$&gt;</span>
+<span class="lineno">  411 </span><span class="spaces">                </span><span class="istickedoff">locateErrors (fromIntegral residue) (T.length bech32 - 1)</span></span>
+<span class="lineno">  412 </span>
+<span class="lineno">  413 </span>-- | Decode a Bech32 string into a human-readable prefix and data payload.
+<span class="lineno">  414 </span>--
+<span class="lineno">  415 </span>-- == Example
+<span class="lineno">  416 </span>--
+<span class="lineno">  417 </span>-- &gt;&gt;&gt; import Prelude
+<span class="lineno">  418 </span>-- &gt;&gt;&gt; import Codec.Binary.Bech32
+<span class="lineno">  419 </span>-- &gt;&gt;&gt; import Data.Text.Encoding
+<span class="lineno">  420 </span>--
+<span class="lineno">  421 </span>-- First, decode the input:
+<span class="lineno">  422 </span>--
+<span class="lineno">  423 </span>-- &gt;&gt;&gt; input = &quot;example1f3hhyetdyp5hqum4d5sxgmmvdaezqumfwssxzmt9wsss9un3cx&quot;
+<span class="lineno">  424 </span>-- &gt;&gt;&gt; Right (prefix, dataPart) = decode input
+<span class="lineno">  425 </span>--
+<span class="lineno">  426 </span>-- Next, examine the decoded human-readable prefix:
+<span class="lineno">  427 </span>--
+<span class="lineno">  428 </span>-- &gt;&gt;&gt; humanReadablePartToText prefix
+<span class="lineno">  429 </span>-- &quot;example&quot;
+<span class="lineno">  430 </span>--
+<span class="lineno">  431 </span>-- Finally, examine the decoded data payload:
+<span class="lineno">  432 </span>--
+<span class="lineno">  433 </span>-- &gt;&gt;&gt; decodeUtf8 &lt;$&gt; dataPartToBytes dataPart
+<span class="lineno">  434 </span>-- Just &quot;Lorem ipsum dolor sit amet!&quot;
+<span class="lineno">  435 </span>--
+<span class="lineno">  436 </span>decode :: Text -&gt; Either DecodingError (HumanReadablePart, DataPart)
+<span class="lineno">  437 </span><span class="decl"><span class="istickedoff">decode bech32 = do</span>
+<span class="lineno">  438 </span><span class="spaces">    </span><span class="istickedoff">guardE (T.length bech32 &lt;= encodedStringMaxLength) StringToDecodeTooLong</span>
+<span class="lineno">  439 </span><span class="spaces">    </span><span class="istickedoff">decodeLenient bech32</span></span>
+<span class="lineno">  440 </span>
+<span class="lineno">  441 </span>-- | Parse a data-with-checksum part, checking that each character is part
+<span class="lineno">  442 </span>-- of the supported character set. If one or more characters are not in the
+<span class="lineno">  443 </span>-- supported character set, return the list of illegal character positions.
+<span class="lineno">  444 </span>parseDataWithChecksumPart :: Text -&gt; Either [CharPosition] [Word5]
+<span class="lineno">  445 </span><span class="decl"><span class="istickedoff">parseDataWithChecksumPart dcpUnparsed =</span>
+<span class="lineno">  446 </span><span class="spaces">    </span><span class="istickedoff">case mapM dataCharToWord $ T.unpack dcpUnparsed of</span>
+<span class="lineno">  447 </span><span class="spaces">        </span><span class="istickedoff">Nothing -&gt; Left invalidCharPositions</span>
+<span class="lineno">  448 </span><span class="spaces">        </span><span class="istickedoff">Just dcp -&gt; Right dcp</span>
+<span class="lineno">  449 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  450 </span><span class="spaces">    </span><span class="istickedoff">invalidCharPositions =</span>
+<span class="lineno">  451 </span><span class="spaces">        </span><span class="istickedoff">CharPosition . fst &lt;$&gt; filter (isNothing . snd)</span>
+<span class="lineno">  452 </span><span class="spaces">            </span><span class="istickedoff">([0 .. ] `zip` (dataCharToWord &lt;$&gt; T.unpack dcpUnparsed))</span></span>
+<span class="lineno">  453 </span>
+<span class="lineno">  454 </span>-- | Convert an error encountered while parsing a human-readable part into a
+<span class="lineno">  455 </span>-- general decoding error.
+<span class="lineno">  456 </span>humanReadablePartError :: HumanReadablePartError -&gt; DecodingError
+<span class="lineno">  457 </span><span class="decl"><span class="istickedoff">humanReadablePartError = \case</span>
+<span class="lineno">  458 </span><span class="spaces">    </span><span class="istickedoff">HumanReadablePartTooLong -&gt;</span>
+<span class="lineno">  459 </span><span class="spaces">        </span><span class="istickedoff">StringToDecodeContainsInvalidChars</span>
+<span class="lineno">  460 </span><span class="spaces">            </span><span class="istickedoff">[CharPosition humanReadablePartMaxLength]</span>
+<span class="lineno">  461 </span><span class="spaces">    </span><span class="istickedoff">HumanReadablePartTooShort -&gt;</span>
+<span class="lineno">  462 </span><span class="spaces">        </span><span class="istickedoff">StringToDecodeContainsInvalidChars</span>
+<span class="lineno">  463 </span><span class="spaces">            </span><span class="istickedoff">[CharPosition $ humanReadablePartMinLength - 1]</span>
+<span class="lineno">  464 </span><span class="spaces">    </span><span class="istickedoff">HumanReadablePartContainsInvalidChars ps -&gt;</span>
+<span class="lineno">  465 </span><span class="spaces">        </span><span class="istickedoff">StringToDecodeContainsInvalidChars ps</span></span>
+<span class="lineno">  466 </span>
+<span class="lineno">  467 </span>-- | Represents the set of errors that may occur while decoding a Bech32
+<span class="lineno">  468 </span>-- string with the 'decode' function.
+<span class="lineno">  469 </span>data DecodingError
+<span class="lineno">  470 </span>    = StringToDecodeTooLong
+<span class="lineno">  471 </span>      -- ^ The string to decode is /longer than/ 'encodedStringMaxLength'.
+<span class="lineno">  472 </span>    | StringToDecodeTooShort
+<span class="lineno">  473 </span>      -- ^ The string to decode is /shorter than/ 'encodedStringMinLength'.
+<span class="lineno">  474 </span>    | StringToDecodeHasMixedCase
+<span class="lineno">  475 </span>      -- ^ The string to decode contains /both/ upper case /and/ lower case
+<span class="lineno">  476 </span>      -- characters.
+<span class="lineno">  477 </span>    | StringToDecodeMissingSeparatorChar
+<span class="lineno">  478 </span>      -- ^ The string to decode is missing the /separator character/, specified
+<span class="lineno">  479 </span>      -- by 'separatorChar'.
+<span class="lineno">  480 </span>    | StringToDecodeContainsInvalidChars [CharPosition]
+<span class="lineno">  481 </span>      -- ^ The string to decode contains one or more /invalid characters/.
+<span class="lineno">  482 </span>      --
+<span class="lineno">  483 </span>      -- In cases where it /is/ possible to determine the exact locations of
+<span class="lineno">  484 </span>      -- erroneous characters, this list will encode those locations. Clients
+<span class="lineno">  485 </span>      -- can use this information to provide user feedback.
+<span class="lineno">  486 </span>      --
+<span class="lineno">  487 </span>      -- In cases where it /isn't/ possible to reliably determine the locations
+<span class="lineno">  488 </span>      -- of erroneous characters, this list will be empty.
+<span class="lineno">  489 </span>    deriving (<span class="decl"><span class="istickedoff">Eq</span></span>, <span class="decl"><span class="istickedoff">Show</span></span>)
+<span class="lineno">  490 </span>
+<span class="lineno">  491 </span>-- | The separator character.
+<span class="lineno">  492 </span>--
+<span class="lineno">  493 </span>-- This character appears immediately after the human-readable part and before
+<span class="lineno">  494 </span>-- the data part in an encoded string.
+<span class="lineno">  495 </span>--
+<span class="lineno">  496 </span>separatorChar :: Char
+<span class="lineno">  497 </span><span class="decl"><span class="istickedoff">separatorChar = '1'</span></span>
+<span class="lineno">  498 </span>
+<span class="lineno">  499 </span>-- | The length of the checksum portion of an encoded string, in bytes.
+<span class="lineno">  500 </span>checksumLength :: Int
+<span class="lineno">  501 </span><span class="decl"><span class="istickedoff">checksumLength = 6</span></span>
+<span class="lineno">  502 </span>
+<span class="lineno">  503 </span>-- | The length of the separator portion of an encoded string, in bytes.
+<span class="lineno">  504 </span>separatorLength :: Int
+<span class="lineno">  505 </span><span class="decl"><span class="istickedoff">separatorLength = 1</span></span>
+<span class="lineno">  506 </span>
+<span class="lineno">  507 </span>-- | The maximum length of an encoded string, in bytes.
+<span class="lineno">  508 </span>--
+<span class="lineno">  509 </span>-- This length includes the human-readable part, the separator character, the
+<span class="lineno">  510 </span>-- encoded data portion, and the checksum.
+<span class="lineno">  511 </span>--
+<span class="lineno">  512 </span>encodedStringMaxLength :: Int
+<span class="lineno">  513 </span><span class="decl"><span class="istickedoff">encodedStringMaxLength = 90</span></span>
+<span class="lineno">  514 </span>
+<span class="lineno">  515 </span>-- | The minimum length of an encoded string, in bytes.
+<span class="lineno">  516 </span>--
+<span class="lineno">  517 </span>-- This length includes the human-readable part, the separator character, the
+<span class="lineno">  518 </span>-- encoded data portion, and the checksum.
+<span class="lineno">  519 </span>--
+<span class="lineno">  520 </span>encodedStringMinLength :: Int
+<span class="lineno">  521 </span><span class="decl"><span class="istickedoff">encodedStringMinLength =</span>
+<span class="lineno">  522 </span><span class="spaces">    </span><span class="istickedoff">humanReadablePartMinLength + separatorLength + checksumLength</span></span>
+<span class="lineno">  523 </span>
+<span class="lineno">  524 </span>{-------------------------------------------------------------------------------
+<span class="lineno">  525 </span>                            Character Manipulation
+<span class="lineno">  526 </span>-------------------------------------------------------------------------------}
+<span class="lineno">  527 </span>
+<span class="lineno">  528 </span>-- | The zero-based position of a character in a string, counting from the left.
+<span class="lineno">  529 </span>--
+<span class="lineno">  530 </span>-- Values of this type are typically used to reflect the positions of errors.
+<span class="lineno">  531 </span>--
+<span class="lineno">  532 </span>-- See 'DecodingError'.
+<span class="lineno">  533 </span>--
+<span class="lineno">  534 </span>newtype CharPosition = CharPosition Int
+<span class="lineno">  535 </span>    deriving (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="istickedoff">Show</span></span>)
+<span class="lineno">  536 </span>
+<span class="lineno">  537 </span>{-------------------------------------------------------------------------------
+<span class="lineno">  538 </span>                              Bit Manipulation
+<span class="lineno">  539 </span>-------------------------------------------------------------------------------}
+<span class="lineno">  540 </span>
+<span class="lineno">  541 </span>(.&gt;&gt;.), (.&lt;&lt;.) :: Bits a =&gt; a -&gt; Int -&gt; a
+<span class="lineno">  542 </span><span class="decl"><span class="istickedoff">(.&gt;&gt;.) = unsafeShiftR</span></span>
+<span class="lineno">  543 </span><span class="decl"><span class="istickedoff">(.&lt;&lt;.) = unsafeShiftL</span></span>
+<span class="lineno">  544 </span>
+<span class="lineno">  545 </span>-- | Represents a __data word__ of __5 bits__ in width.
+<span class="lineno">  546 </span>--
+<span class="lineno">  547 </span>-- Each character in the data portion of a Bech32 string encodes exactly 5 bits
+<span class="lineno">  548 </span>-- of data.
+<span class="lineno">  549 </span>--
+<span class="lineno">  550 </span>-- === Construction and Deconstruction
+<span class="lineno">  551 </span>--
+<span class="lineno">  552 </span>-- Use the 'toEnum' and 'fromEnum' functions to construct and deconstruct
+<span class="lineno">  553 </span>-- 'Word5' values.
+<span class="lineno">  554 </span>--
+<span class="lineno">  555 </span>-- === Packing Words into Data Payloads
+<span class="lineno">  556 </span>--
+<span class="lineno">  557 </span>-- Use the 'dataPartFromWords' and 'dataPartToWords' functions to pack and
+<span class="lineno">  558 </span>-- unpack 'Word5' values into and out of data payloads.
+<span class="lineno">  559 </span>--
+<span class="lineno">  560 </span>newtype Word5 = Word5 { <span class="nottickedoff"><span class="decl"><span class="nottickedoff">getWord5</span></span></span> :: Word8 }
+<span class="lineno">  561 </span>    deriving (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Ord</span></span></span></span></span></span></span></span></span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff">Show</span></span>)
+<span class="lineno">  562 </span>
+<span class="lineno">  563 </span>instance Bounded Word5 where
+<span class="lineno">  564 </span>    <span class="decl"><span class="istickedoff">minBound = Word5 0</span></span>
+<span class="lineno">  565 </span>    <span class="decl"><span class="istickedoff">maxBound = Word5 31</span></span>
+<span class="lineno">  566 </span>
+<span class="lineno">  567 </span>instance Enum Word5 where
+<span class="lineno">  568 </span>    <span class="decl"><span class="istickedoff">toEnum = word5</span></span>
+<span class="lineno">  569 </span>    <span class="decl"><span class="istickedoff">fromEnum = fromWord5</span></span>
+<span class="lineno">  570 </span>
+<span class="lineno">  571 </span>instance Ix Word5 where
+<span class="lineno">  572 </span>    <span class="decl"><span class="nottickedoff">range (Word5 m, Word5 n) = map Word5 $ range (m, n)</span></span>
+<span class="lineno">  573 </span>    <span class="decl"><span class="istickedoff">index (Word5 m, Word5 n) (Word5 i) = index (m, n) i</span></span>
+<span class="lineno">  574 </span>    <span class="decl"><span class="istickedoff">inRange (m,n) i = m &lt;= i &amp;&amp; i &lt;= n</span></span>
+<span class="lineno">  575 </span>
+<span class="lineno">  576 </span>word5 :: Integral a =&gt; a -&gt; Word5
+<span class="lineno">  577 </span><span class="decl"><span class="istickedoff">word5 x = Word5 (fromIntegral x .&amp;. 31)</span></span>
+<span class="lineno">  578 </span>{-# INLINE word5 #-}
+<span class="lineno">  579 </span>{-# SPECIALIZE INLINE word5 :: Word8 -&gt; Word5 #-}
+<span class="lineno">  580 </span>
+<span class="lineno">  581 </span>fromWord5 :: Integral a =&gt; Word5 -&gt; a
+<span class="lineno">  582 </span><span class="decl"><span class="istickedoff">fromWord5 (Word5 x) = fromIntegral x</span></span>
+<span class="lineno">  583 </span>{-# INLINE fromWord5 #-}
+<span class="lineno">  584 </span>{-# SPECIALIZE INLINE fromWord5 :: Word5 -&gt; Word8 #-}
+<span class="lineno">  585 </span>
+<span class="lineno">  586 </span>polymod :: [Word5] -&gt; Word
+<span class="lineno">  587 </span><span class="decl"><span class="istickedoff">polymod values = foldl' go 1 values .&amp;. 0x3fffffff</span>
+<span class="lineno">  588 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  589 </span><span class="spaces">    </span><span class="istickedoff">go chk value =</span>
+<span class="lineno">  590 </span><span class="spaces">        </span><span class="istickedoff">foldl' xor chk' [g | (g, i) &lt;- zip generator [25 ..], testBit chk i]</span>
+<span class="lineno">  591 </span><span class="spaces">      </span><span class="istickedoff">where</span>
+<span class="lineno">  592 </span><span class="spaces">        </span><span class="istickedoff">chk' = chk .&lt;&lt;. 5 `xor` fromWord5 value</span>
+<span class="lineno">  593 </span><span class="spaces">        </span><span class="istickedoff">generator =</span>
+<span class="lineno">  594 </span><span class="spaces">            </span><span class="istickedoff">[ 0x3b6a57b2</span>
+<span class="lineno">  595 </span><span class="spaces">            </span><span class="istickedoff">, 0x26508e6d</span>
+<span class="lineno">  596 </span><span class="spaces">            </span><span class="istickedoff">, 0x1ea119fa</span>
+<span class="lineno">  597 </span><span class="spaces">            </span><span class="istickedoff">, 0x3d4233dd</span>
+<span class="lineno">  598 </span><span class="spaces">            </span><span class="istickedoff">, 0x2a1462b3 ]</span></span>
+<span class="lineno">  599 </span>
+<span class="lineno">  600 </span>createChecksum :: HumanReadablePart -&gt; DataPart -&gt; [Word5]
+<span class="lineno">  601 </span><span class="decl"><span class="istickedoff">createChecksum hrp dat = [word5 (polymod' .&gt;&gt;. i) | i &lt;- [25, 20 .. 0]]</span>
+<span class="lineno">  602 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  603 </span><span class="spaces">    </span><span class="istickedoff">values = humanReadablePartToWords hrp ++ dataPartToWords dat</span>
+<span class="lineno">  604 </span><span class="spaces">    </span><span class="istickedoff">polymod' =</span>
+<span class="lineno">  605 </span><span class="spaces">        </span><span class="istickedoff">polymod (values ++ map Word5 [0, 0, 0, 0, 0, 0]) `xor` 1</span></span>
+<span class="lineno">  606 </span>
+<span class="lineno">  607 </span>verifyChecksum :: HumanReadablePart -&gt; [Word5] -&gt; Bool
+<span class="lineno">  608 </span><span class="decl"><span class="istickedoff">verifyChecksum hrp dat = polymod (humanReadablePartToWords hrp ++ dat) == 1</span></span>
+<span class="lineno">  609 </span>
+<span class="lineno">  610 </span>type Pad f = Int -&gt; Int -&gt; Word -&gt; [[Word]] -&gt; f [[Word]]
+<span class="lineno">  611 </span>
+<span class="lineno">  612 </span>yesPadding :: Pad Identity
+<span class="lineno">  613 </span><span class="decl"><span class="istickedoff">yesPadding _ 0 _ result = return result</span>
+<span class="lineno">  614 </span><span class="spaces"></span><span class="istickedoff">yesPadding _ _ padValue result = return $ [padValue] : result</span></span>
+<span class="lineno">  615 </span>{-# INLINE yesPadding #-}
+<span class="lineno">  616 </span>
+<span class="lineno">  617 </span>noPadding :: Pad Maybe
+<span class="lineno">  618 </span><span class="decl"><span class="istickedoff">noPadding frombits bits padValue result = do</span>
+<span class="lineno">  619 </span><span class="spaces">    </span><span class="istickedoff">guard $ bits &lt; frombits &amp;&amp; padValue == 0</span>
+<span class="lineno">  620 </span><span class="spaces">    </span><span class="istickedoff">return result</span></span>
+<span class="lineno">  621 </span>{-# INLINE noPadding #-}
+<span class="lineno">  622 </span>
+<span class="lineno">  623 </span>-- | Big-endian conversion of a word string from base '2^frombits' to base
+<span class="lineno">  624 </span>-- '2^tobits'. The 'frombits' and 'twobits' parameters must be positive, while
+<span class="lineno">  625 </span>-- '2^frombits' and '2^tobits' must be smaller than the size of 'Word'. Every
+<span class="lineno">  626 </span>-- value in 'dat' must be strictly smaller than '2^frombits'.
+<span class="lineno">  627 </span>convertBits :: Functor f =&gt; [Word] -&gt; Int -&gt; Int -&gt; Pad f -&gt; f [Word]
+<span class="lineno">  628 </span><span class="decl"><span class="istickedoff">convertBits dat frombits tobits pad = concat . reverse &lt;$&gt; go dat 0 0 []</span>
+<span class="lineno">  629 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  630 </span><span class="spaces">    </span><span class="istickedoff">go [] acc bits result =</span>
+<span class="lineno">  631 </span><span class="spaces">        </span><span class="istickedoff">let padValue = (acc .&lt;&lt;. (tobits - bits)) .&amp;. maxv</span>
+<span class="lineno">  632 </span><span class="spaces">        </span><span class="istickedoff">in pad frombits bits padValue result</span>
+<span class="lineno">  633 </span><span class="spaces">    </span><span class="istickedoff">go (value:dat') acc bits result =</span>
+<span class="lineno">  634 </span><span class="spaces">        </span><span class="istickedoff">go dat' acc' (bits' `rem` tobits) (result' : result)</span>
+<span class="lineno">  635 </span><span class="spaces">      </span><span class="istickedoff">where</span>
+<span class="lineno">  636 </span><span class="spaces">        </span><span class="istickedoff">acc' = (acc .&lt;&lt;. frombits) .|. fromIntegral value</span>
+<span class="lineno">  637 </span><span class="spaces">        </span><span class="istickedoff">bits' = bits + frombits</span>
+<span class="lineno">  638 </span><span class="spaces">        </span><span class="istickedoff">result' =</span>
+<span class="lineno">  639 </span><span class="spaces">            </span><span class="istickedoff">[ (acc' .&gt;&gt;. b) .&amp;. maxv</span>
+<span class="lineno">  640 </span><span class="spaces">            </span><span class="istickedoff">| b &lt;- [bits' - tobits, bits' - 2 * tobits .. 0] ]</span>
+<span class="lineno">  641 </span><span class="spaces">    </span><span class="istickedoff">maxv = (1 .&lt;&lt;. tobits) - 1</span></span>
+<span class="lineno">  642 </span>{-# INLINE convertBits #-}
+<span class="lineno">  643 </span>
+<span class="lineno">  644 </span>toBase32 :: [Word8] -&gt; [Word5]
+<span class="lineno">  645 </span><span class="decl"><span class="istickedoff">toBase32 dat =</span>
+<span class="lineno">  646 </span><span class="spaces">    </span><span class="istickedoff">map word5 $ runIdentity $ convertBits (map fromIntegral dat) 8 5 yesPadding</span></span>
+<span class="lineno">  647 </span>
+<span class="lineno">  648 </span>toBase256 :: [Word5] -&gt; Maybe [Word8]
+<span class="lineno">  649 </span><span class="decl"><span class="istickedoff">toBase256 dat =</span>
+<span class="lineno">  650 </span><span class="spaces">    </span><span class="istickedoff">map fromIntegral &lt;$&gt; convertBits (map fromWord5 dat) 5 8 noPadding</span></span>
+<span class="lineno">  651 </span>
+<span class="lineno">  652 </span>{-------------------------------------------------------------------------------
+<span class="lineno">  653 </span>                           Error Location Detection
+<span class="lineno">  654 </span>-------------------------------------------------------------------------------}
+<span class="lineno">  655 </span>
+<span class="lineno">  656 </span>-- | This lookup table is a Haskell translation of the reference JavaScript
+<span class="lineno">  657 </span>--   implementation here: https://git.io/fj8FR
+<span class="lineno">  658 </span>gf_1024_exp :: Array Int Int
+<span class="lineno">  659 </span><span class="decl"><span class="istickedoff">gf_1024_exp = Arr.listArray (0, 1023) [</span>
+<span class="lineno">  660 </span><span class="spaces">    </span><span class="istickedoff">1, 303, 635, 446, 997, 640, 121, 142, 959, 420, 350, 438, 166, 39, 543,</span>
+<span class="lineno">  661 </span><span class="spaces">    </span><span class="istickedoff">335, 831, 691, 117, 632, 719, 97, 107, 374, 558, 797, 54, 150, 858, 877,</span>
+<span class="lineno">  662 </span><span class="spaces">    </span><span class="istickedoff">724, 1013, 294, 23, 354, 61, 164, 633, 992, 538, 469, 659, 174, 868, 184,</span>
+<span class="lineno">  663 </span><span class="spaces">    </span><span class="istickedoff">809, 766, 563, 866, 851, 257, 520, 45, 770, 535, 524, 408, 213, 436, 760,</span>
+<span class="lineno">  664 </span><span class="spaces">    </span><span class="istickedoff">472, 330, 933, 799, 616, 361, 15, 391, 756, 814, 58, 608, 554, 680, 993,</span>
+<span class="lineno">  665 </span><span class="spaces">    </span><span class="istickedoff">821, 942, 813, 843, 484, 193, 935, 321, 919, 572, 741, 423, 559, 562,</span>
+<span class="lineno">  666 </span><span class="spaces">    </span><span class="istickedoff">589, 296, 191, 493, 685, 891, 665, 435, 60, 395, 2, 606, 511, 853, 746,</span>
+<span class="lineno">  667 </span><span class="spaces">    </span><span class="istickedoff">32, 219, 284, 631, 840, 661, 837, 332, 78, 311, 670, 887, 111, 195, 505,</span>
+<span class="lineno">  668 </span><span class="spaces">    </span><span class="istickedoff">190, 194, 214, 709, 380, 819, 69, 261, 957, 1018, 161, 739, 588, 7, 708,</span>
+<span class="lineno">  669 </span><span class="spaces">    </span><span class="istickedoff">83, 328, 507, 736, 317, 899, 47, 348, 1000, 345, 882, 245, 367, 996, 943,</span>
+<span class="lineno">  670 </span><span class="spaces">    </span><span class="istickedoff">514, 304, 90, 804, 295, 312, 793, 387, 833, 249, 921, 660, 618, 823, 496,</span>
+<span class="lineno">  671 </span><span class="spaces">    </span><span class="istickedoff">722, 30, 782, 225, 892, 93, 480, 372, 112, 738, 867, 636, 890, 950, 968,</span>
+<span class="lineno">  672 </span><span class="spaces">    </span><span class="istickedoff">386, 622, 642, 551, 369, 234, 846, 382, 365, 442, 592, 343, 986, 122,</span>
+<span class="lineno">  673 </span><span class="spaces">    </span><span class="istickedoff">1023, 59, 847, 81, 790, 4, 437, 983, 931, 244, 64, 415, 529, 487, 944,</span>
+<span class="lineno">  674 </span><span class="spaces">    </span><span class="istickedoff">35, 938, 664, 156, 583, 53, 999, 222, 390, 987, 341, 388, 389, 170, 721,</span>
+<span class="lineno">  675 </span><span class="spaces">    </span><span class="istickedoff">879, 138, 522, 627, 765, 322, 230, 440, 14, 168, 143, 656, 991, 224, 595,</span>
+<span class="lineno">  676 </span><span class="spaces">    </span><span class="istickedoff">550, 94, 657, 752, 667, 1005, 451, 734, 744, 638, 292, 585, 157, 872,</span>
+<span class="lineno">  677 </span><span class="spaces">    </span><span class="istickedoff">590, 601, 827, 774, 930, 475, 571, 33, 500, 871, 969, 173, 21, 828, 450,</span>
+<span class="lineno">  678 </span><span class="spaces">    </span><span class="istickedoff">1009, 147, 960, 705, 201, 228, 998, 497, 1021, 613, 688, 772, 508, 36,</span>
+<span class="lineno">  679 </span><span class="spaces">    </span><span class="istickedoff">366, 715, 468, 956, 725, 730, 861, 425, 647, 701, 221, 759, 95, 958, 139,</span>
+<span class="lineno">  680 </span><span class="spaces">    </span><span class="istickedoff">805, 8, 835, 679, 614, 449, 128, 791, 299, 974, 617, 70, 628, 57, 273,</span>
+<span class="lineno">  681 </span><span class="spaces">    </span><span class="istickedoff">430, 67, 750, 405, 780, 703, 643, 776, 778, 340, 171, 1022, 276, 308,</span>
+<span class="lineno">  682 </span><span class="spaces">    </span><span class="istickedoff">495, 243, 644, 460, 857, 28, 336, 286, 41, 695, 448, 431, 364, 149, 43,</span>
+<span class="lineno">  683 </span><span class="spaces">    </span><span class="istickedoff">233, 63, 762, 902, 181, 240, 501, 584, 434, 275, 1008, 444, 443, 895,</span>
+<span class="lineno">  684 </span><span class="spaces">    </span><span class="istickedoff">812, 612, 927, 383, 66, 961, 1006, 690, 346, 3, 881, 900, 747, 271, 672,</span>
+<span class="lineno">  685 </span><span class="spaces">    </span><span class="istickedoff">162, 402, 456, 748, 971, 755, 490, 105, 808, 977, 72, 732, 182, 897, 625,</span>
+<span class="lineno">  686 </span><span class="spaces">    </span><span class="istickedoff">163, 189, 947, 850, 46, 115, 403, 231, 151, 629, 278, 874, 16, 934, 110,</span>
+<span class="lineno">  687 </span><span class="spaces">    </span><span class="istickedoff">492, 898, 256, 807, 598, 700, 498, 140, 481, 91, 523, 860, 134, 252, 771,</span>
+<span class="lineno">  688 </span><span class="spaces">    </span><span class="istickedoff">824, 119, 38, 816, 820, 641, 342, 757, 513, 577, 990, 463, 40, 920, 955,</span>
+<span class="lineno">  689 </span><span class="spaces">    </span><span class="istickedoff">17, 649, 533, 82, 103, 896, 862, 728, 259, 86, 466, 87, 253, 556, 323,</span>
+<span class="lineno">  690 </span><span class="spaces">    </span><span class="istickedoff">457, 963, 432, 845, 527, 745, 849, 863, 1015, 888, 488, 567, 727, 132,</span>
+<span class="lineno">  691 </span><span class="spaces">    </span><span class="istickedoff">674, 764, 109, 669, 6, 1003, 552, 246, 542, 96, 324, 781, 912, 248, 694,</span>
+<span class="lineno">  692 </span><span class="spaces">    </span><span class="istickedoff">239, 980, 210, 880, 683, 144, 177, 325, 546, 491, 326, 339, 623, 941, 92,</span>
+<span class="lineno">  693 </span><span class="spaces">    </span><span class="istickedoff">207, 783, 462, 263, 483, 517, 1012, 9, 620, 220, 984, 548, 512, 878, 421,</span>
+<span class="lineno">  694 </span><span class="spaces">    </span><span class="istickedoff">113, 973, 280, 962, 159, 310, 945, 268, 465, 806, 889, 199, 76, 873, 865,</span>
+<span class="lineno">  695 </span><span class="spaces">    </span><span class="istickedoff">34, 645, 227, 290, 418, 693, 926, 80, 569, 639, 11, 50, 291, 141, 206,</span>
+<span class="lineno">  696 </span><span class="spaces">    </span><span class="istickedoff">544, 949, 185, 518, 133, 909, 135, 467, 376, 646, 914, 678, 841, 954,</span>
+<span class="lineno">  697 </span><span class="spaces">    </span><span class="istickedoff">318, 242, 939, 951, 743, 1017, 976, 359, 167, 264, 100, 241, 218, 51, 12,</span>
+<span class="lineno">  698 </span><span class="spaces">    </span><span class="istickedoff">758, 368, 453, 309, 192, 648, 826, 553, 473, 101, 478, 673, 397, 1001,</span>
+<span class="lineno">  699 </span><span class="spaces">    </span><span class="istickedoff">118, 265, 331, 650, 356, 982, 652, 655, 510, 634, 145, 414, 830, 924,</span>
+<span class="lineno">  700 </span><span class="spaces">    </span><span class="istickedoff">526, 966, 298, 737, 18, 504, 401, 697, 360, 288, 1020, 842, 203, 698,</span>
+<span class="lineno">  701 </span><span class="spaces">    </span><span class="istickedoff">537, 676, 279, 581, 619, 536, 907, 876, 1019, 398, 152, 1010, 994, 68,</span>
+<span class="lineno">  702 </span><span class="spaces">    </span><span class="istickedoff">42, 454, 580, 836, 99, 565, 137, 379, 503, 22, 77, 582, 282, 412, 352,</span>
+<span class="lineno">  703 </span><span class="spaces">    </span><span class="istickedoff">611, 347, 300, 266, 570, 270, 911, 729, 44, 557, 108, 946, 637, 597, 461,</span>
+<span class="lineno">  704 </span><span class="spaces">    </span><span class="istickedoff">630, 615, 238, 763, 681, 718, 334, 528, 200, 459, 413, 79, 24, 229, 713,</span>
+<span class="lineno">  705 </span><span class="spaces">    </span><span class="istickedoff">906, 579, 384, 48, 893, 370, 923, 202, 917, 98, 794, 754, 197, 530, 662,</span>
+<span class="lineno">  706 </span><span class="spaces">    </span><span class="istickedoff">52, 712, 677, 56, 62, 981, 509, 267, 789, 885, 561, 316, 684, 596, 226,</span>
+<span class="lineno">  707 </span><span class="spaces">    </span><span class="istickedoff">13, 985, 779, 123, 720, 576, 753, 948, 406, 125, 315, 104, 519, 426, 502,</span>
+<span class="lineno">  708 </span><span class="spaces">    </span><span class="istickedoff">313, 566, 1016, 767, 796, 281, 749, 740, 136, 84, 908, 424, 936, 198,</span>
+<span class="lineno">  709 </span><span class="spaces">    </span><span class="istickedoff">355, 274, 735, 967, 5, 154, 428, 541, 785, 704, 486, 671, 600, 532, 381,</span>
+<span class="lineno">  710 </span><span class="spaces">    </span><span class="istickedoff">540, 574, 187, 88, 378, 216, 621, 499, 419, 922, 485, 494, 476, 255, 114,</span>
+<span class="lineno">  711 </span><span class="spaces">    </span><span class="istickedoff">188, 668, 297, 400, 918, 787, 158, 25, 458, 178, 564, 422, 768, 73, 1011,</span>
+<span class="lineno">  712 </span><span class="spaces">    </span><span class="istickedoff">717, 575, 404, 547, 196, 829, 237, 394, 301, 37, 65, 176, 106, 89, 85,</span>
+<span class="lineno">  713 </span><span class="spaces">    </span><span class="istickedoff">675, 979, 534, 803, 995, 363, 593, 120, 417, 452, 26, 699, 822, 223, 169,</span>
+<span class="lineno">  714 </span><span class="spaces">    </span><span class="istickedoff">416, 235, 609, 773, 211, 607, 208, 302, 852, 965, 603, 357, 761, 247,</span>
+<span class="lineno">  715 </span><span class="spaces">    </span><span class="istickedoff">817, 539, 250, 232, 272, 129, 568, 848, 624, 396, 710, 525, 183, 686, 10,</span>
+<span class="lineno">  716 </span><span class="spaces">    </span><span class="istickedoff">285, 856, 307, 811, 160, 972, 55, 441, 289, 723, 305, 373, 351, 153, 733,</span>
+<span class="lineno">  717 </span><span class="spaces">    </span><span class="istickedoff">409, 506, 975, 838, 573, 970, 988, 913, 471, 205, 337, 49, 594, 777, 549,</span>
+<span class="lineno">  718 </span><span class="spaces">    </span><span class="istickedoff">815, 277, 27, 916, 333, 353, 844, 800, 146, 751, 186, 375, 769, 358, 392,</span>
+<span class="lineno">  719 </span><span class="spaces">    </span><span class="istickedoff">883, 474, 788, 602, 74, 130, 329, 212, 155, 131, 102, 687, 293, 870, 742,</span>
+<span class="lineno">  720 </span><span class="spaces">    </span><span class="istickedoff">726, 427, 217, 834, 904, 29, 127, 869, 407, 338, 832, 470, 482, 810, 399,</span>
+<span class="lineno">  721 </span><span class="spaces">    </span><span class="istickedoff">439, 393, 604, 929, 682, 447, 714, 251, 455, 875, 319, 477, 464, 521,</span>
+<span class="lineno">  722 </span><span class="spaces">    </span><span class="istickedoff">258, 377, 937, 489, 792, 172, 314, 327, 124, 20, 531, 953, 591, 886, 320,</span>
+<span class="lineno">  723 </span><span class="spaces">    </span><span class="istickedoff">696, 71, 859, 578, 175, 587, 707, 663, 283, 179, 795, 989, 702, 940, 371,</span>
+<span class="lineno">  724 </span><span class="spaces">    </span><span class="istickedoff">692, 689, 555, 903, 410, 651, 75, 429, 818, 362, 894, 515, 31, 545, 666,</span>
+<span class="lineno">  725 </span><span class="spaces">    </span><span class="istickedoff">706, 952, 864, 269, 254, 349, 711, 802, 716, 784, 1007, 925, 801, 445,</span>
+<span class="lineno">  726 </span><span class="spaces">    </span><span class="istickedoff">148, 260, 658, 385, 287, 262, 204, 126, 586, 1004, 236, 165, 854, 411,</span>
+<span class="lineno">  727 </span><span class="spaces">    </span><span class="istickedoff">932, 560, 19, 215, 1002, 775, 653, 928, 901, 964, 884, 798, 839, 786,</span>
+<span class="lineno">  728 </span><span class="spaces">    </span><span class="istickedoff">433, 610, 116, 855, 180, 479, 910, 1014, 599, 915, 905, 306, 516, 731,</span>
+<span class="lineno">  729 </span><span class="spaces">    </span><span class="istickedoff">626, 978, 825, 344, 605, 654, 209 ]</span></span>
+<span class="lineno">  730 </span>
+<span class="lineno">  731 </span>-- | This lookup table is a Haskell translation of the reference JavaScript
+<span class="lineno">  732 </span>--   implementation here: https://git.io/fj8FE
+<span class="lineno">  733 </span>gf_1024_log :: Array Int Int
+<span class="lineno">  734 </span><span class="decl"><span class="istickedoff">gf_1024_log = Arr.listArray (0, 1023) [</span>
+<span class="lineno">  735 </span><span class="spaces">    </span><span class="istickedoff">-1, 0, 99, 363, 198, 726, 462, 132, 297, 495, 825, 528, 561, 693, 231,</span>
+<span class="lineno">  736 </span><span class="spaces">    </span><span class="istickedoff">66, 396, 429, 594, 990, 924, 264, 627, 33, 660, 759, 792, 858, 330, 891,</span>
+<span class="lineno">  737 </span><span class="spaces">    </span><span class="istickedoff">165, 957, 104, 259, 518, 208, 280, 776, 416, 13, 426, 333, 618, 339, 641,</span>
+<span class="lineno">  738 </span><span class="spaces">    </span><span class="istickedoff">52, 388, 140, 666, 852, 529, 560, 678, 213, 26, 832, 681, 309, 70, 194,</span>
+<span class="lineno">  739 </span><span class="spaces">    </span><span class="istickedoff">97, 35, 682, 341, 203, 777, 358, 312, 617, 125, 307, 931, 379, 765, 875,</span>
+<span class="lineno">  740 </span><span class="spaces">    </span><span class="istickedoff">951, 515, 628, 112, 659, 525, 196, 432, 134, 717, 781, 438, 440, 740,</span>
+<span class="lineno">  741 </span><span class="spaces">    </span><span class="istickedoff">780, 151, 408, 487, 169, 239, 293, 467, 21, 672, 622, 557, 571, 881, 433,</span>
+<span class="lineno">  742 </span><span class="spaces">    </span><span class="istickedoff">704, 376, 779, 22, 643, 460, 398, 116, 172, 503, 751, 389, 1004, 18, 576,</span>
+<span class="lineno">  743 </span><span class="spaces">    </span><span class="istickedoff">415, 789, 6, 192, 696, 923, 702, 981, 892, 302, 816, 876, 880, 457, 537,</span>
+<span class="lineno">  744 </span><span class="spaces">    </span><span class="istickedoff">411, 539, 716, 624, 224, 295, 406, 531, 7, 233, 478, 586, 864, 268, 974,</span>
+<span class="lineno">  745 </span><span class="spaces">    </span><span class="istickedoff">338, 27, 392, 614, 839, 727, 879, 211, 250, 758, 507, 830, 129, 369, 384,</span>
+<span class="lineno">  746 </span><span class="spaces">    </span><span class="istickedoff">36, 985, 12, 555, 232, 796, 221, 321, 920, 263, 42, 934, 778, 479, 761,</span>
+<span class="lineno">  747 </span><span class="spaces">    </span><span class="istickedoff">939, 1006, 344, 381, 823, 44, 535, 866, 739, 752, 385, 119, 91, 566, 80,</span>
+<span class="lineno">  748 </span><span class="spaces">    </span><span class="istickedoff">120, 117, 771, 675, 721, 514, 656, 271, 670, 602, 980, 850, 532, 488,</span>
+<span class="lineno">  749 </span><span class="spaces">    </span><span class="istickedoff">803, 1022, 475, 801, 878, 57, 121, 991, 742, 888, 559, 105, 497, 291,</span>
+<span class="lineno">  750 </span><span class="spaces">    </span><span class="istickedoff">215, 795, 236, 167, 692, 520, 272, 661, 229, 391, 814, 340, 184, 798,</span>
+<span class="lineno">  751 </span><span class="spaces">    </span><span class="istickedoff">984, 773, 650, 473, 345, 558, 548, 326, 202, 145, 465, 810, 471, 158,</span>
+<span class="lineno">  752 </span><span class="spaces">    </span><span class="istickedoff">813, 908, 412, 441, 964, 750, 401, 50, 915, 437, 975, 126, 979, 491, 556,</span>
+<span class="lineno">  753 </span><span class="spaces">    </span><span class="istickedoff">577, 636, 685, 510, 963, 638, 367, 815, 310, 723, 349, 323, 857, 394,</span>
+<span class="lineno">  754 </span><span class="spaces">    </span><span class="istickedoff">606, 505, 713, 630, 938, 106, 826, 332, 978, 599, 834, 521, 530, 248,</span>
+<span class="lineno">  755 </span><span class="spaces">    </span><span class="istickedoff">883, 32, 153, 90, 754, 592, 304, 635, 775, 804, 1, 150, 836, 1013, 828,</span>
+<span class="lineno">  756 </span><span class="spaces">    </span><span class="istickedoff">324, 565, 508, 113, 154, 708, 921, 703, 689, 138, 547, 911, 929, 82, 228,</span>
+<span class="lineno">  757 </span><span class="spaces">    </span><span class="istickedoff">443, 468, 480, 483, 922, 135, 877, 61, 578, 111, 860, 654, 15, 331, 851,</span>
+<span class="lineno">  758 </span><span class="spaces">    </span><span class="istickedoff">895, 484, 320, 218, 420, 190, 1019, 143, 362, 634, 141, 965, 10, 838,</span>
+<span class="lineno">  759 </span><span class="spaces">    </span><span class="istickedoff">632, 861, 34, 722, 580, 808, 869, 554, 598, 65, 954, 787, 337, 187, 281,</span>
+<span class="lineno">  760 </span><span class="spaces">    </span><span class="istickedoff">146, 563, 183, 668, 944, 171, 837, 23, 867, 541, 916, 741, 625, 123, 736,</span>
+<span class="lineno">  761 </span><span class="spaces">    </span><span class="istickedoff">186, 357, 665, 977, 179, 156, 219, 220, 216, 67, 870, 902, 774, 98, 820,</span>
+<span class="lineno">  762 </span><span class="spaces">    </span><span class="istickedoff">574, 613, 900, 755, 596, 370, 390, 769, 314, 701, 894, 56, 841, 949, 987,</span>
+<span class="lineno">  763 </span><span class="spaces">    </span><span class="istickedoff">631, 658, 587, 204, 797, 790, 522, 745, 9, 502, 763, 86, 719, 288, 706,</span>
+<span class="lineno">  764 </span><span class="spaces">    </span><span class="istickedoff">887, 728, 952, 311, 336, 446, 1002, 348, 96, 58, 199, 11, 901, 230, 833,</span>
+<span class="lineno">  765 </span><span class="spaces">    </span><span class="istickedoff">188, 352, 351, 973, 3, 906, 335, 301, 266, 244, 791, 564, 619, 909, 371,</span>
+<span class="lineno">  766 </span><span class="spaces">    </span><span class="istickedoff">444, 760, 657, 328, 647, 490, 425, 913, 511, 439, 540, 283, 40, 897, 849,</span>
+<span class="lineno">  767 </span><span class="spaces">    </span><span class="istickedoff">60, 570, 872, 257, 749, 912, 572, 1007, 170, 407, 898, 492, 79, 747, 732,</span>
+<span class="lineno">  768 </span><span class="spaces">    </span><span class="istickedoff">206, 454, 918, 375, 482, 399, 92, 748, 325, 163, 274, 405, 744, 260, 346,</span>
+<span class="lineno">  769 </span><span class="spaces">    </span><span class="istickedoff">707, 626, 595, 118, 842, 136, 279, 684, 584, 101, 500, 422, 149, 956,</span>
+<span class="lineno">  770 </span><span class="spaces">    </span><span class="istickedoff">1014, 493, 536, 705, 51, 914, 225, 409, 55, 822, 590, 448, 655, 205, 676,</span>
+<span class="lineno">  771 </span><span class="spaces">    </span><span class="istickedoff">925, 735, 431, 784, 54, 609, 604, 39, 812, 737, 729, 466, 14, 533, 958,</span>
+<span class="lineno">  772 </span><span class="spaces">    </span><span class="istickedoff">481, 770, 499, 855, 238, 182, 464, 569, 72, 947, 442, 642, 24, 87, 989,</span>
+<span class="lineno">  773 </span><span class="spaces">    </span><span class="istickedoff">688, 88, 47, 762, 623, 709, 455, 817, 526, 637, 258, 84, 845, 738, 768,</span>
+<span class="lineno">  774 </span><span class="spaces">    </span><span class="istickedoff">698, 423, 933, 664, 620, 607, 629, 212, 347, 249, 982, 935, 131, 89, 252,</span>
+<span class="lineno">  775 </span><span class="spaces">    </span><span class="istickedoff">927, 189, 788, 853, 237, 691, 646, 403, 1010, 734, 253, 874, 807, 903,</span>
+<span class="lineno">  776 </span><span class="spaces">    </span><span class="istickedoff">1020, 100, 802, 71, 799, 1003, 633, 355, 276, 300, 649, 64, 306, 161,</span>
+<span class="lineno">  777 </span><span class="spaces">    </span><span class="istickedoff">608, 496, 743, 180, 485, 819, 383, 1016, 226, 308, 393, 648, 107, 19, 37,</span>
+<span class="lineno">  778 </span><span class="spaces">    </span><span class="istickedoff">585, 2, 175, 645, 247, 527, 5, 419, 181, 317, 327, 519, 542, 289, 567,</span>
+<span class="lineno">  779 </span><span class="spaces">    </span><span class="istickedoff">430, 579, 950, 582, 994, 1021, 583, 234, 240, 976, 41, 160, 109, 677,</span>
+<span class="lineno">  780 </span><span class="spaces">    </span><span class="istickedoff">937, 210, 95, 959, 242, 753, 461, 114, 733, 368, 573, 458, 782, 605, 680,</span>
+<span class="lineno">  781 </span><span class="spaces">    </span><span class="istickedoff">544, 299, 73, 652, 905, 477, 690, 93, 824, 882, 277, 946, 361, 17, 945,</span>
+<span class="lineno">  782 </span><span class="spaces">    </span><span class="istickedoff">523, 472, 334, 930, 597, 603, 793, 404, 290, 942, 316, 731, 270, 960,</span>
+<span class="lineno">  783 </span><span class="spaces">    </span><span class="istickedoff">936, 133, 122, 821, 966, 679, 662, 907, 282, 968, 767, 653, 20, 697, 222,</span>
+<span class="lineno">  784 </span><span class="spaces">    </span><span class="istickedoff">164, 835, 30, 285, 886, 456, 436, 640, 286, 1015, 380, 840, 245, 724,</span>
+<span class="lineno">  785 </span><span class="spaces">    </span><span class="istickedoff">137, 593, 173, 130, 715, 85, 885, 551, 246, 449, 103, 366, 372, 714, 313,</span>
+<span class="lineno">  786 </span><span class="spaces">    </span><span class="istickedoff">865, 241, 699, 674, 374, 68, 421, 562, 292, 59, 809, 342, 651, 459, 227,</span>
+<span class="lineno">  787 </span><span class="spaces">    </span><span class="istickedoff">46, 711, 764, 868, 53, 413, 278, 800, 255, 993, 318, 854, 319, 695, 315,</span>
+<span class="lineno">  788 </span><span class="spaces">    </span><span class="istickedoff">469, 166, 489, 969, 730, 1001, 757, 873, 686, 197, 303, 919, 155, 673,</span>
+<span class="lineno">  789 </span><span class="spaces">    </span><span class="istickedoff">940, 712, 25, 999, 63, 863, 972, 967, 785, 152, 296, 512, 402, 377, 45,</span>
+<span class="lineno">  790 </span><span class="spaces">    </span><span class="istickedoff">899, 829, 354, 77, 69, 856, 417, 811, 953, 124, 418, 75, 794, 162, 414,</span>
+<span class="lineno">  791 </span><span class="spaces">    </span><span class="istickedoff">1018, 568, 254, 265, 772, 588, 16, 896, 157, 889, 298, 621, 110, 844,</span>
+<span class="lineno">  792 </span><span class="spaces">    </span><span class="istickedoff">1000, 108, 545, 601, 78, 862, 447, 185, 195, 818, 450, 387, 49, 805, 102,</span>
+<span class="lineno">  793 </span><span class="spaces">    </span><span class="istickedoff">986, 1005, 827, 329, 28, 932, 410, 287, 435, 451, 962, 517, 48, 174, 43,</span>
+<span class="lineno">  794 </span><span class="spaces">    </span><span class="istickedoff">893, 884, 261, 251, 516, 395, 910, 611, 29, 501, 223, 476, 364, 144, 871,</span>
+<span class="lineno">  795 </span><span class="spaces">    </span><span class="istickedoff">998, 687, 928, 115, 453, 513, 176, 94, 168, 667, 955, 353, 434, 382, 400,</span>
+<span class="lineno">  796 </span><span class="spaces">    </span><span class="istickedoff">139, 365, 996, 343, 948, 890, 1012, 663, 610, 718, 538, 1008, 639, 470,</span>
+<span class="lineno">  797 </span><span class="spaces">    </span><span class="istickedoff">848, 543, 1011, 859, 671, 756, 83, 427, 159, 746, 669, 589, 971, 524,</span>
+<span class="lineno">  798 </span><span class="spaces">    </span><span class="istickedoff">356, 995, 904, 256, 201, 988, 62, 397, 81, 720, 917, 209, 549, 943, 486,</span>
+<span class="lineno">  799 </span><span class="spaces">    </span><span class="istickedoff">76, 148, 207, 509, 644, 386, 700, 534, 177, 550, 961, 926, 546, 428, 284,</span>
+<span class="lineno">  800 </span><span class="spaces">    </span><span class="istickedoff">127, 294, 8, 269, 359, 506, 445, 997, 806, 591, 725, 178, 262, 846, 373,</span>
+<span class="lineno">  801 </span><span class="spaces">    </span><span class="istickedoff">831, 504, 305, 843, 553, 378, 1017, 783, 474, 683, 581, 200, 498, 694,</span>
+<span class="lineno">  802 </span><span class="spaces">    </span><span class="istickedoff">191, 217, 847, 941, 424, 235, 38, 74, 616, 786, 147, 4, 273, 214, 142,</span>
+<span class="lineno">  803 </span><span class="spaces">    </span><span class="istickedoff">575, 992, 463, 983, 243, 360, 970, 350, 267, 615, 766, 494, 31, 1009,</span>
+<span class="lineno">  804 </span><span class="spaces">    </span><span class="istickedoff">452, 710, 552, 128, 612, 600, 275, 322, 193 ]</span></span>
+<span class="lineno">  805 </span>
+<span class="lineno">  806 </span>-- | This function is a Haskell translation of the reference JavaScript
+<span class="lineno">  807 </span>--   implementation here: https://git.io/fj8Fu
+<span class="lineno">  808 </span>syndrome :: (Bits a, Num a) =&gt; a -&gt; a
+<span class="lineno">  809 </span><span class="decl"><span class="istickedoff">syndrome residue = low</span>
+<span class="lineno">  810 </span><span class="spaces">    </span><span class="istickedoff">`xor` (low `unsafeShiftL` 10)</span>
+<span class="lineno">  811 </span><span class="spaces">    </span><span class="istickedoff">`xor` (low `unsafeShiftL` 20)</span>
+<span class="lineno">  812 </span><span class="spaces">    </span><span class="istickedoff">`xor` (if residue `testBit`  5 then 0x31edd3c4 else 0)</span>
+<span class="lineno">  813 </span><span class="spaces">    </span><span class="istickedoff">`xor` (if residue `testBit`  6 then 0x335f86a8 else 0)</span>
+<span class="lineno">  814 </span><span class="spaces">    </span><span class="istickedoff">`xor` (if residue `testBit`  7 then 0x363b8870 else 0)</span>
+<span class="lineno">  815 </span><span class="spaces">    </span><span class="istickedoff">`xor` (if residue `testBit`  8 then 0x3e6390c9 else 0)</span>
+<span class="lineno">  816 </span><span class="spaces">    </span><span class="istickedoff">`xor` (if residue `testBit`  9 then 0x2ec72192 else 0)</span>
+<span class="lineno">  817 </span><span class="spaces">    </span><span class="istickedoff">`xor` (if residue `testBit` 10 then 0x1046f79d else 0)</span>
+<span class="lineno">  818 </span><span class="spaces">    </span><span class="istickedoff">`xor` (if residue `testBit` 11 then 0x208d4e33 else 0)</span>
+<span class="lineno">  819 </span><span class="spaces">    </span><span class="istickedoff">`xor` (if residue `testBit` 12 then 0x130ebd6f else 0)</span>
+<span class="lineno">  820 </span><span class="spaces">    </span><span class="istickedoff">`xor` (if residue `testBit` 13 then 0x2499fade else 0)</span>
+<span class="lineno">  821 </span><span class="spaces">    </span><span class="istickedoff">`xor` (if residue `testBit` 14 then 0x1b27d4b5 else 0)</span>
+<span class="lineno">  822 </span><span class="spaces">    </span><span class="istickedoff">`xor` (if residue `testBit` 15 then 0x04be1eb4 else 0)</span>
+<span class="lineno">  823 </span><span class="spaces">    </span><span class="istickedoff">`xor` (if residue `testBit` 16 then 0x0968b861 else 0)</span>
+<span class="lineno">  824 </span><span class="spaces">    </span><span class="istickedoff">`xor` (if residue `testBit` 17 then 0x1055f0c2 else 0)</span>
+<span class="lineno">  825 </span><span class="spaces">    </span><span class="istickedoff">`xor` (if residue `testBit` 18 then 0x20ab4584 else 0)</span>
+<span class="lineno">  826 </span><span class="spaces">    </span><span class="istickedoff">`xor` (if residue `testBit` 19 then 0x1342af08 else 0)</span>
+<span class="lineno">  827 </span><span class="spaces">    </span><span class="istickedoff">`xor` (if residue `testBit` 20 then 0x24f1f318 else 0)</span>
+<span class="lineno">  828 </span><span class="spaces">    </span><span class="istickedoff">`xor` (if residue `testBit` 21 then 0x1be34739 else 0)</span>
+<span class="lineno">  829 </span><span class="spaces">    </span><span class="istickedoff">`xor` (if residue `testBit` 22 then 0x35562f7b else 0)</span>
+<span class="lineno">  830 </span><span class="spaces">    </span><span class="istickedoff">`xor` (if residue `testBit` 23 then 0x3a3c5bff else 0)</span>
+<span class="lineno">  831 </span><span class="spaces">    </span><span class="istickedoff">`xor` (if residue `testBit` 24 then 0x266c96f7 else 0)</span>
+<span class="lineno">  832 </span><span class="spaces">    </span><span class="istickedoff">`xor` (if residue `testBit` 25 then 0x25c78b65 else 0)</span>
+<span class="lineno">  833 </span><span class="spaces">    </span><span class="istickedoff">`xor` (if residue `testBit` 26 then 0x1b1f13ea else 0)</span>
+<span class="lineno">  834 </span><span class="spaces">    </span><span class="istickedoff">`xor` (if residue `testBit` 27 then 0x34baa2f4 else 0)</span>
+<span class="lineno">  835 </span><span class="spaces">    </span><span class="istickedoff">`xor` (if residue `testBit` 28 then 0x3b61c0e1 else 0)</span>
+<span class="lineno">  836 </span><span class="spaces">    </span><span class="istickedoff">`xor` (if residue `testBit` 29 then 0x265325c2 else 0)</span>
+<span class="lineno">  837 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  838 </span><span class="spaces">    </span><span class="istickedoff">low = residue .&amp;. 0x1f</span></span>
+<span class="lineno">  839 </span>
+<span class="lineno">  840 </span>-- | For a given Bech32 string residue and Bech32 string length, reports the
+<span class="lineno">  841 </span>-- positions of detectably erroneous characters in the original Bech32 string.
+<span class="lineno">  842 </span>--
+<span class="lineno">  843 </span>-- The reported character positions are zero-based, counting from right to left
+<span class="lineno">  844 </span>-- within the original string, but omitting the separation character (which is
+<span class="lineno">  845 </span>-- not counted).
+<span class="lineno">  846 </span>--
+<span class="lineno">  847 </span>-- Returns the empty list if it is not possible to reliably determine the
+<span class="lineno">  848 </span>-- locations of errors.
+<span class="lineno">  849 </span>--
+<span class="lineno">  850 </span>-- This function is a Haskell translation of the reference JavaScript
+<span class="lineno">  851 </span>-- implementation here: https://git.io/fj8Fz
+<span class="lineno">  852 </span>--
+<span class="lineno">  853 </span>locateErrors :: Int -&gt; Int -&gt; [Int]
+<span class="lineno">  854 </span><span class="decl"><span class="istickedoff">locateErrors residue len</span>
+<span class="lineno">  855 </span><span class="spaces">    </span><span class="istickedoff">| <span class="tickonlyfalse">residue == 0</span> = <span class="nottickedoff">[]</span></span>
+<span class="lineno">  856 </span><span class="spaces">    </span><span class="istickedoff">| l_s0 /= -1 &amp;&amp;</span>
+<span class="lineno">  857 </span><span class="spaces">      </span><span class="istickedoff">l_s1 /= -1 &amp;&amp;</span>
+<span class="lineno">  858 </span><span class="spaces">      </span><span class="istickedoff">l_s2 /= -1 &amp;&amp; (2 * l_s1 - l_s2 - l_s0 + 2046) `mod` 1023 == 0 =</span>
+<span class="lineno">  859 </span><span class="spaces">          </span><span class="istickedoff">let p1 = (l_s1 - l_s0 + 1023) `mod` 1023 in</span>
+<span class="lineno">  860 </span><span class="spaces">          </span><span class="istickedoff">if p1 &gt;= len then [] else</span>
+<span class="lineno">  861 </span><span class="spaces">          </span><span class="istickedoff">let l_e1 = l_s0 + (1023 - 997) * p1 in</span>
+<span class="lineno">  862 </span><span class="spaces">          </span><span class="istickedoff">[p1 | l_e1 `mod` 33 &lt;= 0]</span>
+<span class="lineno">  863 </span><span class="spaces">    </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> =</span>
+<span class="lineno">  864 </span><span class="spaces">          </span><span class="istickedoff">case filter (not . null) $ map findError [0 .. len - 1] of</span>
+<span class="lineno">  865 </span><span class="spaces">              </span><span class="istickedoff">[] -&gt; []</span>
+<span class="lineno">  866 </span><span class="spaces">              </span><span class="istickedoff">es -&gt; join es</span>
+<span class="lineno">  867 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  868 </span><span class="spaces">    </span><span class="istickedoff">syn = syndrome residue</span>
+<span class="lineno">  869 </span><span class="spaces">    </span><span class="istickedoff">s0 = syn .&amp;. 0x3FF</span>
+<span class="lineno">  870 </span><span class="spaces">    </span><span class="istickedoff">s1 = (syn `unsafeShiftR` 10) .&amp;. 0x3FF</span>
+<span class="lineno">  871 </span><span class="spaces">    </span><span class="istickedoff">s2 = syn `unsafeShiftR` 20</span>
+<span class="lineno">  872 </span><span class="spaces">    </span><span class="istickedoff">l_s0 = gf_1024_log Arr.! s0</span>
+<span class="lineno">  873 </span><span class="spaces">    </span><span class="istickedoff">l_s1 = gf_1024_log Arr.! s1</span>
+<span class="lineno">  874 </span><span class="spaces">    </span><span class="istickedoff">l_s2 = gf_1024_log Arr.! s2</span>
+<span class="lineno">  875 </span><span class="spaces"></span><span class="istickedoff"></span>
+<span class="lineno">  876 </span><span class="spaces">    </span><span class="istickedoff">findError :: Int -&gt; [Int]</span>
+<span class="lineno">  877 </span><span class="spaces">    </span><span class="istickedoff">findError p1</span>
+<span class="lineno">  878 </span><span class="spaces">        </span><span class="istickedoff">| s2_s1p1 == 0      = []</span>
+<span class="lineno">  879 </span><span class="spaces">        </span><span class="istickedoff">| s1_s0p1 == 0      = []</span>
+<span class="lineno">  880 </span><span class="spaces">        </span><span class="istickedoff">| p2 &gt;= len         = []</span>
+<span class="lineno">  881 </span><span class="spaces">        </span><span class="istickedoff">| p1 == p2          = []</span>
+<span class="lineno">  882 </span><span class="spaces">        </span><span class="istickedoff">| <span class="tickonlyfalse">s1_s0p2 == 0</span>      = <span class="nottickedoff">[]</span></span>
+<span class="lineno">  883 </span><span class="spaces">        </span><span class="istickedoff">| l_e2 `mod` 33 &gt; 0 = []</span>
+<span class="lineno">  884 </span><span class="spaces">        </span><span class="istickedoff">| l_e1 `mod` 33 &gt; 0 = []</span>
+<span class="lineno">  885 </span><span class="spaces">        </span><span class="istickedoff">| p1 &lt; p2           = [p1, p2]</span>
+<span class="lineno">  886 </span><span class="spaces">        </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span>         = [p2, p1]</span>
+<span class="lineno">  887 </span><span class="spaces">      </span><span class="istickedoff">where</span>
+<span class="lineno">  888 </span><span class="spaces">        </span><span class="istickedoff">inv_p1_p2 = 1023 -</span>
+<span class="lineno">  889 </span><span class="spaces">            </span><span class="istickedoff">(gf_1024_log Arr.! (gf_1024_exp Arr.! p1)) `xor`</span>
+<span class="lineno">  890 </span><span class="spaces">            </span><span class="istickedoff">(gf_1024_exp Arr.! p2)</span>
+<span class="lineno">  891 </span><span class="spaces">        </span><span class="istickedoff">l_e1 = (gf_1024_log Arr.! s1_s0p2) + inv_p1_p2 + (1023 - 997) * p1</span>
+<span class="lineno">  892 </span><span class="spaces">        </span><span class="istickedoff">l_e2 = l_s1_s0p1 + inv_p1_p2 + (1023 - 997) * p2</span>
+<span class="lineno">  893 </span><span class="spaces">        </span><span class="istickedoff">l_s1_s0p1 = gf_1024_log Arr.! s1_s0p1</span>
+<span class="lineno">  894 </span><span class="spaces">        </span><span class="istickedoff">p2 = ((gf_1024_log Arr.! s2_s1p1) - l_s1_s0p1 + 1023) `mod` 1023</span>
+<span class="lineno">  895 </span><span class="spaces">        </span><span class="istickedoff">s1_s0p1 = s1 `xor`</span>
+<span class="lineno">  896 </span><span class="spaces">            </span><span class="istickedoff">(if s0 == 0 then 0 else gf_1024_exp Arr.! ((l_s0 + p1) `mod` 1023))</span>
+<span class="lineno">  897 </span><span class="spaces">        </span><span class="istickedoff">s1_s0p2 = s1 `xor`</span>
+<span class="lineno">  898 </span><span class="spaces">            </span><span class="istickedoff">(if s0 == 0 then 0 else gf_1024_exp Arr.! ((l_s0 + p2) `mod` 1023))</span>
+<span class="lineno">  899 </span><span class="spaces">        </span><span class="istickedoff">s2_s1p1 = s2 `xor`</span>
+<span class="lineno">  900 </span><span class="spaces">            </span><span class="istickedoff">(if s1 == 0 then 0 else gf_1024_exp Arr.! ((l_s1 + p1) `mod` 1023))</span></span>
+<span class="lineno">  901 </span>
+<span class="lineno">  902 </span>{-------------------------------------------------------------------------------
+<span class="lineno">  903 </span>                                   Utilities
+<span class="lineno">  904 </span>-------------------------------------------------------------------------------}
+<span class="lineno">  905 </span>
+<span class="lineno">  906 </span>guardE :: Bool -&gt; e -&gt; Either e ()
+<span class="lineno">  907 </span><span class="decl"><span class="istickedoff">guardE b e = if b then Right <span class="nottickedoff">()</span> else Left e</span></span>
+<span class="lineno">  908 </span>
+<span class="lineno">  909 </span>-- | Splits the given 'Text' into a prefix and a suffix using the last
+<span class="lineno">  910 </span>-- occurrence of the specified separator character as a splitting point.
+<span class="lineno">  911 </span>-- Evaluates to 'Nothing' if the specified 'Text' does not contain the
+<span class="lineno">  912 </span>-- separator character.
+<span class="lineno">  913 </span>splitAtLastOccurrence :: Char -&gt; Text -&gt; Maybe (Text, Text)
+<span class="lineno">  914 </span><span class="decl"><span class="istickedoff">splitAtLastOccurrence c s</span>
+<span class="lineno">  915 </span><span class="spaces">    </span><span class="istickedoff">| isNothing (T.find (== c) s) = Nothing</span>
+<span class="lineno">  916 </span><span class="spaces">    </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> = pure (prefix, suffix)</span>
+<span class="lineno">  917 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">  918 </span><span class="spaces">    </span><span class="istickedoff">(prefixPlusOne, suffix) = T.breakOnEnd (T.pack [c]) s</span>
+<span class="lineno">  919 </span><span class="spaces">    </span><span class="istickedoff">prefix = T.dropEnd 1 prefixPlusOne</span></span>
+
+</pre>
+</body>
+</html>
