@@ -148,7 +148,7 @@ run Cmd{prefix} = do
                     let fromBase58 = decodeBase58 bitcoinAlphabet . T.encodeUtf8
                     dataPartFromBytes <$> maybeToEither err (fromBase58 source)
                 Nothing ->
-                    fail "Unable to detect input encoding. Neither Base16, \
+                    Left "Unable to detect input encoding. Neither Base16, \
                          \Bech32 nor Base58."
         B8.putStrLn $ T.encodeUtf8 $ Bech32.encodeLenient hrp datapart
 
