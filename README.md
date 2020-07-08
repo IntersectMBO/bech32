@@ -3,6 +3,46 @@
 <a href='https://github.com/input-output-hk/bech32/actions?query=workflow%3A"Continuous Integration"'><img src="https://img.shields.io/github/workflow/status/input-output-hk/bech32/Continuous Integration?style=for-the-badge" /></a>
 <a href="https://input-output-hk.github.io/bech32/coverage/hpc_index.html"><img src="https://input-output-hk.github.io/bech32/coverage/badge.svg" /></a>
 
+## `bech32` command-line
+
+A small executable is available for rapid conversion in the console. Currently only available for Linux. See [releases](https://github.com/input-output-hk/bech32/releases) for pre-compiled binary artifacts.
+
+```console
+Usage: bech32 [PREFIX]
+  Convert to and from bech32 strings. Data are read from standard input.
+
+Available options:
+  -h,--help                Show this help text
+  PREFIX                   An optional human-readable prefix (e.g. 'addr').
+                             - When provided, the input text is decoded from various encoding 
+                               formats and re-encoded to bech32 using the given prefix.
+                             - When omitted, the input text is decoded from bech32 to base16.
+
+Supported input encoding formats: Base16, Bech32 & Base58.
+```
+
+### Examples
+
+#### To Bech32:
+
+```console
+$ bech32 base16_ <<< 706174617465
+base16_1wpshgct5v5r5mxh0
+
+$ bech32 base58_ <<< Ae2tdPwUPEYy
+base58_1p58rejhd9592uusa8pzj2
+
+$ bech32 new_prefix <<< old_prefix1wpshgcg2s33x3
+new_prefix1wpshgcgeak9mv
+```
+
+#### From Bech32
+
+```console
+$ bech32 <<< base16_1wpshgct5v5r5mxh0
+706174617465
+```
+
 ## Bech32 Haskell Libraries
 
 The repository provides [Haskell](https://www.haskell.org/) libraries for
