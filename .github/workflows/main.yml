@@ -85,7 +85,6 @@ jobs:
       id: variables
       run: |
         echo ::set-output name=tag::${GITHUB_REF/refs\/tags\//}
-        echo ::set-output name=pkg_name::$(cat *.cabal | grep "name:" | sed "s/name:\s*\(.*\)/\1/")
 
     - name: 🐧 Download Artifact (linux)
       if: matrix.os == 'ubuntu-latest'
@@ -96,10 +95,10 @@ jobs:
     - name: 📦 Package Artifacts
       run: |
         mv ubuntu-latest-exe bin
-        tar czf $PKG_NAME-$TAG-linux64.tar.gz README.md LICENSE NOTICE bin/*
+        tar czf $PKG_NAME-$TAG-linux64.tar.gz README.md bech32/LICENSE bin/*
         rm -rf bin
       env:
-        PKG_NAME: ${{ steps.variables.outputs.pkg_name }}
+        PKG_NAME: bech32
         TAG: ${{ steps.variables.outputs.tag }}
 
     - name: 🚀 Release
@@ -108,9 +107,9 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         DRAFT_RELEASE: "true"
         PRE_RELEASE: "false"
-        CHANGELOG_FILE: "ChangeLog.md"
+        CHANGELOG_FILE: "bech32/ChangeLog.md"
         ALLOW_EMPTY_CHANGELOG: "false"
         ALLOW_TAG_PREFIX: "true"
       with:
         args: |
-          ${{ steps.variables.outputs.pkg_name }}-${{ steps.variables.outputs.tag }}-linux64.tar.gz
+          bech32-${{ steps.variables.outputs.tag }}-linux64.tar.gz
