@@ -139,7 +139,7 @@ span.spaces    { background: white }
 <span class="lineno">  120 </span>--   https://git.io/fj8FS
 <span class="lineno">  121 </span>newtype DataPart = DataPart Text
 <span class="lineno">  122 </span>    deriving newtype (<span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff">Eq</span></span></span></span>, <span class="decl"><span class="istickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Monoid</span></span></span></span></span></span>, <span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff"><span class="decl"><span class="nottickedoff">Semigroup</span></span></span></span></span></span>)
-<span class="lineno">  123 </span>    deriving stock <span class="decl"><span class="istickedoff">Show</span></span>
+<span class="lineno">  123 </span>    deriving stock <span class="decl"><span class="nottickedoff">Show</span></span>
 <span class="lineno">  124 </span>
 <span class="lineno">  125 </span>-- | Returns true iff. the specified 'DataPart' is valid.
 <span class="lineno">  126 </span>--
@@ -878,7 +878,7 @@ span.spaces    { background: white }
 <span class="lineno">  859 </span><span class="spaces">          </span><span class="istickedoff">let p1 = (l_s1 - l_s0 + 1023) `mod` 1023 in</span>
 <span class="lineno">  860 </span><span class="spaces">          </span><span class="istickedoff">if p1 &gt;= len then [] else</span>
 <span class="lineno">  861 </span><span class="spaces">          </span><span class="istickedoff">let l_e1 = l_s0 + (1023 - 997) * p1 in</span>
-<span class="lineno">  862 </span><span class="spaces">          </span><span class="istickedoff">[p1 | <span class="tickonlytrue">l_e1 `mod` 33 &lt;= 0</span>]</span>
+<span class="lineno">  862 </span><span class="spaces">          </span><span class="istickedoff">[p1 | l_e1 `mod` 33 &lt;= 0]</span>
 <span class="lineno">  863 </span><span class="spaces">    </span><span class="istickedoff">| <span class="tickonlytrue">otherwise</span> =</span>
 <span class="lineno">  864 </span><span class="spaces">          </span><span class="istickedoff">case filter (not . null) $ map findError [0 .. len - 1] of</span>
 <span class="lineno">  865 </span><span class="spaces">              </span><span class="istickedoff">[] -&gt; []</span>
