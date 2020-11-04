@@ -19,6 +19,7 @@ import Codec.Binary.Bech32.Internal
     , DecodingError (..)
     , HumanReadablePart
     , HumanReadablePartError (..)
+    , ReplaceHrpError (..)
     , dataPartFromBytes
     , dataPartFromText
     , dataPartFromWords
@@ -31,6 +32,7 @@ import Codec.Binary.Bech32.Internal
     , humanReadablePartMaxLength
     , humanReadablePartMinLength
     , humanReadablePartToText
+    , replaceHumanReadablePart
     , separatorChar
     )
 import Control.DeepSeq
@@ -475,6 +477,18 @@ spec = do
 
     describe "Pointless test to trigger coverage on derived instances" $
         it (show $ humanReadablePartFromText $ T.pack "ca") True
+
+    describe "Replacing human-readable part in text" $ do
+        it "should always replace successfully when both hrps and dp are valid " $
+            property $ \dp hrp hrp' -> do
+                let (Right bech32txt) = Bech32.encode hrp dp
+                replaceHumanReadablePart bech32txt hrp' `shouldSatisfy` isRight
+        it "should always return the same decoding error upon replacement with valid hrp" $
+            forM_ invalidChecksums $ \(checksum, expect) ->
+                forM_ validHumanReadableParts $ \hrpTxt -> do
+                    let (Right hrp) = humanReadablePartFromText hrpTxt
+                    replaceHumanReadablePart checksum hrp `shouldBe`
+                        Left (ReplaceHrpErrorDecoding expect)
 
 -- Taken from the BIP 0173 specification: https://git.io/fjBIN
 validHumanReadableParts :: [Text]
