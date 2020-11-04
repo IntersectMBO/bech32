@@ -31,6 +31,8 @@ module Codec.Binary.Bech32.Internal
     , encodedStringMinLength
     , separatorChar
     , separatorLength
+    , replaceHumanReadablePart
+    , ReplaceHrpError (..)
 
       -- * Data Part
     , DataPart
@@ -88,6 +90,8 @@ import Data.ByteString
     ( ByteString )
 import Data.Char
     ( chr, ord, toLower, toUpper )
+import Data.Either.Combinators
+    ( mapLeft )
 import Data.Either.Extra
     ( maybeToEither )
 import Data.Foldable
@@ -368,6 +372,52 @@ encode hrp dp
 --   Bech32 string.
 data EncodingError =
     EncodedStringTooLong
+    -- ^ The resultant encoded string would be /longer than/
+    -- 'encodedStringMaxLength'.
+    deriving (Eq, Show)
+
+-- | Replace the encoded Bech32 string with new human-readable prefix.
+--
+-- == Example
+--
+-- >>> import Prelude
+-- >>> import Codec.Binary.Bech32
+-- >>> import Data.Text.Encoding
+--
+-- First, prepare a human-readable prefix:
+--
+-- >>> Right prefix = humanReadablePartFromText "example"
+--
+-- Next, prepare a data payload:
+--
+-- >>> messageToEncode = "Lorem ipsum dolor sit amet!"
+-- >>> dataPart = dataPartFromBytes $ encodeUtf8 messageToEncode
+--
+-- Then, produce a Bech32 string:
+--
+-- >>> Right bech32txt = encode prefix dataPart
+-- >>> bech32txt
+-- "example1f3hhyetdyp5hqum4d5sxgmmvdaezqumfwssxzmt9wsss9un3cx"
+--
+-- Finally, prepare a new human-readable prefix and replace bech32txt with it:
+--
+-- >>> Right newprefix = humanReadablePartFromText "newexample"
+-- >>> Right bech32txt' = replaceHumanReadablePart bech32txt newprefix
+-- >>> bech32txt'
+-- "newexample1f3hhyetdyp5hqum4d5sxgmmvdaezqumfwssxzmt9wsss3nvvwp"
+replaceHumanReadablePart :: Text -> HumanReadablePart -> Either ReplaceHrpError Text
+replaceHumanReadablePart txt hrp =
+    case decode txt of
+        Left err -> Left $ ReplaceHrpErrorDecoding err
+        Right (_, dataPart) ->
+            mapLeft ReplaceHrpErrorEncoding (encode hrp dataPart)
+
+-- | Represents the set of error conditions that may occur while replacing a hrp with
+--   Bech32 string.
+data ReplaceHrpError =
+      ReplaceHrpErrorDecoding DecodingError
+    -- ^ The input encoded string is invalid.
+    | ReplaceHrpErrorEncoding EncodingError
     -- ^ The resultant encoded string would be /longer than/
     -- 'encodedStringMaxLength'.
     deriving (Eq, Show)

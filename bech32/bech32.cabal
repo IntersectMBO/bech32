@@ -47,6 +47,7 @@ library
     , base >= 4.11.1.0 && < 4.15
     , bytestring
     , containers
+    , either
     , extra
     , text
   hs-source-dirs:

@@ -44,6 +44,8 @@ module Codec.Binary.Bech32
     -- *** Conversion to and from Text
     , humanReadablePartFromText
     , humanReadablePartToText
+    -- *** Replace Human-Readable Prefix in Bech32 Text
+    , replaceHumanReadablePart
     -- *** Error Handling
     , HumanReadablePartError (..)
 
