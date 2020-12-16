@@ -1,0 +1,75 @@
+name: Continuous Integration (Cabal)
+
+on:
+  pull_request:
+    branches: [ "master" ]
+  push:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+
+    defaults:
+      run:
+        shell: bash
+
+    strategy:
+      fail-fast: false
+      matrix:
+        ghc: ["8.6.5"]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+    - name: 💽 Install OS Packages
+      uses: mstksg/get-package@v1
+      with:
+        apt-get: libgmp-dev
+
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v1
+
+    - name: 🧰 Setup Haskell
+      uses: actions/setup-haskell@v1
+      id: setup-haskell
+      with:
+        ghc-version: ${{ matrix.ghc }}
+        cabal-version: '3.2.0.0'
+
+    - name: 🩹 Patch GHC 8.10.2 linker
+      if: matrix.os == 'windows-latest' && matrix.ghc == '8.10.2'
+      run: |
+        sed -i \
+          's|C:/GitLabRunner/builds/2WeHDSFP/0/ghc/ghc/inplace/mingw/bin/ld.exe|C:/ProgramData/chocolatey/lib/ghc.8.10.2/tools/ghc-8.10.2/mingw/bin/ld.exe|g' \
+          C:/ProgramData/chocolatey/lib/ghc.8.10.2/tools/ghc-8.10.2/lib/settings
+
+    - name: 🔄 Cabal update
+      run: cabal update
+
+    - name: 🛠 Cabal Configure
+      run: cabal configure --builddir="$CABAL_BUILDDIR" --enable-tests --enable-benchmarks --write-ghc-environment-files=always
+
+    - name: 💾 Cache Dependencies
+      id: cache
+      uses: actions/cache@v2
+      with:
+        path: ${{ steps.setup-haskell.outputs.cabal-store }}
+        key: cache-cabal-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('bech32/bech32.cabal') }}-${{ hashFiles('bech32-th/bech32-th.cabal') }}
+
+    - name: 🧩 Install dependencies
+      run: cabal build all --only-dependencies
+
+    - name: 🏗 Build
+      run: cabal build all
+
+    - name: 🚢 Install Binaries
+      run: cabal install bech32 --overwrite-policy=always --install-method=copy --installdir=bin
+
+    - name: 🧪 Test
+      run: cabal test all
+
+    - name: 📎 Upload Artifact
+      uses: actions/upload-artifact@v1
+      with:
+        name: ${{ matrix.os }}-exe
+        path: bin
