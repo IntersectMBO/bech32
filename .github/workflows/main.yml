@@ -24,7 +24,7 @@ jobs:
       uses: actions/checkout@v1
 
     - name: 🧰 Setup Stack
-      uses: mstksg/setup-stack@v1
+      uses: timbod7/setup-stack@1f68f27c
 
     - name: 🔑 Variables
       id: variables
@@ -34,7 +34,7 @@ jobs:
 
     - name: 💾 Cache Dependencies
       id: cache
-      uses: actions/cache@v1
+      uses: actions/cache@v2
       with:
         path: ~/.stack
         key: ${{ matrix.os }}-${{ steps.variables.outputs.cache_key }}
