@@ -11,7 +11,7 @@ import Codec.Binary.Bech32
 import Control.Arrow
     ( left, right )
 import Control.Monad
-    ( guard )
+    ( guard, void )
 import Data.ByteArray.Encoding
     ( convertFromBase, convertToBase )
 import Data.ByteString.Base58
@@ -22,25 +22,34 @@ import Data.Either.Extra
     ( maybeToEither )
 import Data.Maybe
     ( fromJust )
+import Data.Version
+    ( showVersion )
 import Options.Applicative
     ( Parser
     , ParserInfo
     , argument
     , customExecParser
     , eitherReader
+    , flag
     , footerDoc
+    , help
     , helpDoc
     , helper
+    , hidden
     , info
+    , long
     , metavar
     , optional
     , prefs
     , progDesc
+    , short
     , showHelpOnEmpty
     , (<|>)
     )
 import Options.Applicative.Help.Pretty
     ( bold, hsep, indent, text, underline, vsep )
+import Paths_bech32
+    ( version )
 import System.IO
     ( BufferMode (..), Handle, hSetBuffering, stderr, stdin, stdout )
 
@@ -54,9 +63,12 @@ import qualified Data.Text.Encoding as T
 main :: IO ()
 main = setup >> parse >>= run
 
-newtype Cmd = Cmd
-  { prefix :: Maybe HumanReadablePart
-  } deriving (Show)
+data Cmd
+    = RunCmd
+    { prefix :: Maybe HumanReadablePart
+    }
+    | VersionCmd
+    deriving (Show)
 
 -- | Enable ANSI colors on Windows and correct output buffering
 setup :: IO ()
@@ -100,7 +112,15 @@ parse = customExecParser (prefs showHelpOnEmpty) parser
         ]
 
     cmd :: Parser Cmd
-    cmd = Cmd <$> optional hrpArgument
+    cmd = (RunCmd <$> optional hrpArgument) <|> (VersionCmd <$ versionFlag)
+
+versionFlag :: Parser ()
+versionFlag = void . flag False True $ mconcat
+    [ long "version"
+    , short 'v'
+    , help "output version information and exit"
+    , hidden
+    ]
 
 -- | Parse a 'HumanReadablePart' as an argument.
 hrpArgument :: Parser HumanReadablePart
@@ -121,11 +141,13 @@ hrpArgument = argument (eitherReader reader) $ mconcat
 
 -- | Run a Command in IO
 run :: Cmd -> IO ()
-run Cmd{prefix} = do
-    source <- T.decodeUtf8 . B8.filter (/= '\n') <$> B8.hGetContents stdin
-    case prefix of
-        Nothing  -> runDecode source
-        Just hrp -> runEncode hrp source
+run cmd = case cmd of
+    VersionCmd -> putStrLn $ showVersion version
+    RunCmd {prefix} -> do
+        source <- T.decodeUtf8 . B8.filter (/= '\n') <$> B8.hGetContents stdin
+        case prefix of
+            Nothing  -> runDecode source
+            Just hrp -> runEncode hrp source
   where
     runDecode source =
         case Bech32.decodeLenient source of
