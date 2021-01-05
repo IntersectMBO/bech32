@@ -29,19 +29,19 @@ jobs:
     - name: 📥 Checkout repository
       uses: actions/checkout@v1
 
+    - name: 🧰 Select optimal cabal version
+      run: |
+        case "$OS" in
+          Windows_NT)   echo "CABAL_VERSION=3.4.0.0-rc5"  >> $GITHUB_ENV;;
+          *)            echo "CABAL_VERSION=3.4.0.0-rc4"  >> $GITHUB_ENV;;
+        esac
+
     - name: 🧰 Setup Haskell
-      uses: actions/setup-haskell@v1
+      uses: haskell/actions/setup@v1
       id: setup-haskell
       with:
         ghc-version: ${{ matrix.ghc }}
-        cabal-version: '3.2.0.0'
-
-    - name: 🩹 Patch GHC 8.10.2 linker
-      if: matrix.os == 'windows-latest' && matrix.ghc == '8.10.2'
-      run: |
-        sed -i \
-          's|C:/GitLabRunner/builds/2WeHDSFP/0/ghc/ghc/inplace/mingw/bin/ld.exe|C:/ProgramData/chocolatey/lib/ghc.8.10.2/tools/ghc-8.10.2/mingw/bin/ld.exe|g' \
-          C:/ProgramData/chocolatey/lib/ghc.8.10.2/tools/ghc-8.10.2/lib/settings
+        cabal-version: ${{ env.CABAL_VERSION }}
 
     - name: 🔄 Cabal update
       run: cabal update
@@ -49,12 +49,21 @@ jobs:
     - name: 🛠 Cabal Configure
       run: cabal configure --builddir="$CABAL_BUILDDIR" --enable-tests --enable-benchmarks --write-ghc-environment-files=always
 
+    - name: 💾 Record dependencies
+      run: |
+        cat ${{ env.PLAN_JSON }} | jq -r '."install-plan"[].id' | sort | uniq > dependencies.txt
+
+    - name: 💾 Set cache version
+      run: echo "CACHE_VERSION=9w76Z3Q" >> $GITHUB_ENV
+
     - name: 💾 Cache Dependencies
-      id: cache
       uses: actions/cache@v2
       with:
         path: ${{ steps.setup-haskell.outputs.cabal-store }}
-        key: cache-cabal-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('bech32/bech32.cabal') }}-${{ hashFiles('bech32-th/bech32-th.cabal') }}
+        key: cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}
+        restore-keys: |
+          cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}
+          cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-
 
     - name: 🧩 Install dependencies
       run: cabal build all --only-dependencies
