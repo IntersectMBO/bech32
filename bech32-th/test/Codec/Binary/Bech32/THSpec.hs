@@ -14,6 +14,7 @@ import Codec.Binary.Bech32
     )
 import Codec.Binary.Bech32.TH
     ( humanReadablePart )
+import Control.DeepSeq
 import Control.Monad
     ( forM_ )
 import Language.Haskell.TH.Quote
@@ -38,9 +39,7 @@ spec =
 
             describe "Parsing invalid human-readable prefixes should fail." $
                 forM_ invalidHumanReadableParts $ \(hrp, expectedError) ->
-                    it (show hrp) $
-                        mkHumanReadablePartExp hrp
-                            `shouldThrow` (== expectedError)
+                    it (show hrp) $ (show <$!!> mkHumanReadablePartExp hrp) `shouldThrow` (== expectedError)
 
 -- | Matches only function application expressions.
 --

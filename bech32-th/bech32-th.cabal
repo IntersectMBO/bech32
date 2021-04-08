@@ -68,6 +68,7 @@ test-suite bech32-th-test
       base
     , bech32
     , bech32-th
+    , deepseq
     , hspec
     , template-haskell
   build-tools:
