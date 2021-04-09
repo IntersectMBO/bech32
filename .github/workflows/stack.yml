@@ -35,7 +35,7 @@ jobs:
       id: variables
       run: |
         echo ::set-output name=pkg_name::$(cat *.cabal | grep "name:" | sed "s/name:\s*\(.*\)/\1/")
-        echo ::set-output name=cache_key::$(md5sum stack.yaml | awk '{print $1}')
+        echo ::set-output name=cache_key::$(md5sum stack.yaml | awk '{print $1}')-$(stack --version | awk '{print $1}')
 
     - name: 💾 Cache Dependencies
       id: cache
