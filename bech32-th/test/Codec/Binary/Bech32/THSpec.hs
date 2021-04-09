@@ -1,3 +1,5 @@
+{-# LANGUAGE BangPatterns #-}
+
 module Codec.Binary.Bech32.THSpec
     ( spec
     ) where
@@ -14,7 +16,6 @@ import Codec.Binary.Bech32
     )
 import Codec.Binary.Bech32.TH
     ( humanReadablePart )
-import Control.DeepSeq
 import Control.Monad
     ( forM_ )
 import Language.Haskell.TH.Quote
@@ -39,7 +40,15 @@ spec =
 
             describe "Parsing invalid human-readable prefixes should fail." $
                 forM_ invalidHumanReadableParts $ \(hrp, expectedError) ->
-                    it (show hrp) $ (show <$!!> mkHumanReadablePartExp hrp) `shouldThrow` (== expectedError)
+                    it (show hrp) $
+                        forceViaShowM (mkHumanReadablePartExp hrp)
+                            `shouldThrow` (== expectedError)
+
+forceViaShowM :: (Monad m, Show a) => m a -> m a
+forceViaShowM f = do
+    a <- f
+    let !_ = length (show a)
+    return a
 
 -- | Matches only function application expressions.
 --
