@@ -18,7 +18,7 @@ jobs:
       fail-fast: false
       matrix:
         ghc: ["8.10.4"]
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-20.04, macos-latest, windows-latest]
 
     steps:
     - name: 💽 Install OS Packages
@@ -75,3 +75,20 @@ jobs:
       with:
         name: ${{ matrix.os }}-exe
         path: bin
+
+  check:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v1
+
+    - # This serves as the required check in Github for merging
+      name: 🌟 Check
+      run: |
+        for x in $(find . -name '*.cabal' | grep -v dist-newstyle); do
+          (
+            pushd $(dirname $x); cabal check
+          )
+        done
