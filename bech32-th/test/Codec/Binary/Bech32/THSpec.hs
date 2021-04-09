@@ -1,3 +1,5 @@
+{-# LANGUAGE BangPatterns #-}
+
 module Codec.Binary.Bech32.THSpec
     ( spec
     ) where
@@ -39,8 +41,14 @@ spec =
             describe "Parsing invalid human-readable prefixes should fail." $
                 forM_ invalidHumanReadableParts $ \(hrp, expectedError) ->
                     it (show hrp) $
-                        mkHumanReadablePartExp hrp
+                        forceViaShowM (mkHumanReadablePartExp hrp)
                             `shouldThrow` (== expectedError)
+
+forceViaShowM :: (Monad m, Show a) => m a -> m a
+forceViaShowM f = do
+    a <- f
+    let !_ = length (show a)
+    return a
 
 -- | Matches only function application expressions.
 --
