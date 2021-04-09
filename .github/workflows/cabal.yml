@@ -40,7 +40,7 @@ jobs:
       run: cabal update
 
     - name: 🛠 Cabal Configure
-      run: cabal configure --enable-tests --enable-benchmarks --write-ghc-environment-files=always
+      run: cabal configure -frelease --enable-tests --enable-benchmarks --write-ghc-environment-files=always
 
     - name: 💾 Record dependencies
       run: |
