@@ -44,7 +44,7 @@ library
       -Werror
   build-depends:
       array
-    , base >= 4.11.1.0 && < 4.15
+    , base >= 4.11.1.0 && <5
     , bytestring
     , containers
     , extra
@@ -63,7 +63,7 @@ executable bech32
       app
   ghc-options: -Wall -Wcompat -fwarn-redundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      base
     , base58-bytestring
     , bech32
     , bytestring
