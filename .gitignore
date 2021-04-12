@@ -1,7 +1,6 @@
 ### Haskell ###
 dist
 dist-*
-cabal-dev
 *.o
 *.hi
 *.chi
@@ -10,15 +9,13 @@ cabal-dev
 *.dyn_hi
 .hpc
 .hsenv
-.cabal-sandbox/
-cabal.sandbox.config
 *.prof
 *.aux
 *.hp
 *.eventlog
 .stack-work/
-cabal.project.local
-cabal.project.local~
+stack.yaml.lock
+cabal.project.local*
 .HTF/
 .ghc.environment.*
 .ghci
@@ -26,4 +23,3 @@ cabal.project.local~
 
 ### Nix ###
 result*
-.stack-to-nix.cache
