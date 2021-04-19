@@ -71,7 +71,7 @@ executable bech32
     , memory
     , optparse-applicative
     , text
-  if flag(release)
+  if flag(release) && !os(darwin)
     ghc-options: -Werror -static -O2
     cc-options: -static
     ld-options: -static -pthread
