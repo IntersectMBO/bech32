@@ -1,0 +1,97 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+span.lineno { color: white; background: #aaaaaa; border-right: solid white 12px }
+span.nottickedoff { background: yellow}
+span.istickedoff { background: white }
+span.tickonlyfalse { margin: -1px; border: 1px solid #f20913; background: #f20913 }
+span.tickonlytrue  { margin: -1px; border: 1px solid #60de51; background: #60de51 }
+span.funcount { font-size: small; color: orange; z-index: 2; position: absolute; right: 20 }
+span.decl { font-weight: bold }
+span.spaces    { background: white }
+</style>
+</head>
+<body>
+<pre>
+<span class="decl"><span class="nottickedoff">never executed</span> <span class="tickonlytrue">always true</span> <span class="tickonlyfalse">always false</span></span>
+</pre>
+<pre>
+<span class="lineno">    1 </span>{-# LANGUAGE TemplateHaskell #-}
+<span class="lineno">    2 </span>
+<span class="lineno">    3 </span>-- |
+<span class="lineno">    4 </span>-- Copyright: © 2020 IOHK
+<span class="lineno">    5 </span>-- License: Apache-2.0
+<span class="lineno">    6 </span>--
+<span class="lineno">    7 </span>-- This module contains Template-Haskell-specific extensions to the
+<span class="lineno">    8 </span>-- [Bech32 library](https://github.com/input-output-hk/bech32).
+<span class="lineno">    9 </span>
+<span class="lineno">   10 </span>module Codec.Binary.Bech32.TH
+<span class="lineno">   11 </span>    (
+<span class="lineno">   12 </span>      -- ** Quasi-Quotation Support
+<span class="lineno">   13 </span>      humanReadablePart
+<span class="lineno">   14 </span>    ) where
+<span class="lineno">   15 </span>
+<span class="lineno">   16 </span>import Prelude
+<span class="lineno">   17 </span>
+<span class="lineno">   18 </span>import Codec.Binary.Bech32
+<span class="lineno">   19 </span>    ( HumanReadablePart, humanReadablePartFromText, humanReadablePartToText )
+<span class="lineno">   20 </span>import Control.Exception
+<span class="lineno">   21 </span>    ( throw )
+<span class="lineno">   22 </span>import Data.Text
+<span class="lineno">   23 </span>    ( Text )
+<span class="lineno">   24 </span>import Language.Haskell.TH.Quote
+<span class="lineno">   25 </span>    ( QuasiQuoter (..) )
+<span class="lineno">   26 </span>import Language.Haskell.TH.Syntax
+<span class="lineno">   27 </span>    ( Exp, Q )
+<span class="lineno">   28 </span>
+<span class="lineno">   29 </span>import qualified Data.Text as T
+<span class="lineno">   30 </span>
+<span class="lineno">   31 </span>-- | A quasiquoter for Bech32 human-readable prefixes.
+<span class="lineno">   32 </span>--
+<span class="lineno">   33 </span>-- This quasiquoter makes it possible to construct values of type
+<span class="lineno">   34 </span>-- 'HumanReadablePart' at compile time, using string literals.
+<span class="lineno">   35 </span>--
+<span class="lineno">   36 </span>-- Failure to parse a string literal will result in a __compile-time error__.
+<span class="lineno">   37 </span>--
+<span class="lineno">   38 </span>-- See 'Codec.Binary.Bech32.HumanReadablePartError' for the set of possible
+<span class="lineno">   39 </span>-- errors that can be raised.
+<span class="lineno">   40 </span>--
+<span class="lineno">   41 </span>-- Example:
+<span class="lineno">   42 </span>--
+<span class="lineno">   43 </span>-- &gt;&gt;&gt; :set -XQuasiQuotes
+<span class="lineno">   44 </span>-- &gt;&gt;&gt; import Codec.Binary.Bech32
+<span class="lineno">   45 </span>-- &gt;&gt;&gt; import Codec.Binary.Bech32.TH
+<span class="lineno">   46 </span>-- &gt;&gt;&gt; let addrPrefix = [humanReadablePart|addr|]
+<span class="lineno">   47 </span>-- &gt;&gt;&gt; addrPrefix
+<span class="lineno">   48 </span>-- HumanReadablePart &quot;addr&quot;
+<span class="lineno">   49 </span>-- &gt;&gt;&gt; :t addrPrefix
+<span class="lineno">   50 </span>-- addrPrefix :: HumanReadablePart
+<span class="lineno">   51 </span>--
+<span class="lineno">   52 </span>humanReadablePart :: QuasiQuoter
+<span class="lineno">   53 </span><span class="decl"><span class="istickedoff">humanReadablePart = QuasiQuoter</span>
+<span class="lineno">   54 </span><span class="spaces">    </span><span class="istickedoff">{ quoteExp  = quoteHumanReadablePart</span>
+<span class="lineno">   55 </span><span class="spaces">    </span><span class="istickedoff">, quotePat  = <span class="nottickedoff">notHandled &quot;patterns&quot;</span></span>
+<span class="lineno">   56 </span><span class="spaces">    </span><span class="istickedoff">, quoteType = <span class="nottickedoff">notHandled &quot;types&quot;</span></span>
+<span class="lineno">   57 </span><span class="spaces">    </span><span class="istickedoff">, quoteDec  = <span class="nottickedoff">notHandled &quot;declarations&quot;</span></span>
+<span class="lineno">   58 </span><span class="spaces">    </span><span class="istickedoff">}</span>
+<span class="lineno">   59 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">   60 </span><span class="spaces">    </span><span class="istickedoff"><span class="nottickedoff">notHandled things =</span></span>
+<span class="lineno">   61 </span><span class="spaces">      </span><span class="istickedoff"><span class="nottickedoff">error $ things &lt;&gt;</span></span>
+<span class="lineno">   62 </span><span class="spaces">          </span><span class="istickedoff"><span class="nottickedoff">&quot; are not handled by the Bech32 humanReadablePart quasiquoter.&quot;</span></span></span>
+<span class="lineno">   63 </span>
+<span class="lineno">   64 </span>quoteHumanReadablePart :: String -&gt; Q Exp
+<span class="lineno">   65 </span><span class="decl"><span class="istickedoff">quoteHumanReadablePart = quote</span>
+<span class="lineno">   66 </span><span class="spaces">    </span><span class="istickedoff">. T.unpack</span>
+<span class="lineno">   67 </span><span class="spaces">    </span><span class="istickedoff">. humanReadablePartToText</span>
+<span class="lineno">   68 </span><span class="spaces">    </span><span class="istickedoff">. unsafeHumanReadablePart</span>
+<span class="lineno">   69 </span><span class="spaces">    </span><span class="istickedoff">. T.pack</span>
+<span class="lineno">   70 </span><span class="spaces">  </span><span class="istickedoff">where</span>
+<span class="lineno">   71 </span><span class="spaces">    </span><span class="istickedoff">quote t = [| unsafeHumanReadablePart t |]</span></span>
+<span class="lineno">   72 </span>
+<span class="lineno">   73 </span>unsafeHumanReadablePart :: Text -&gt; HumanReadablePart
+<span class="lineno">   74 </span><span class="decl"><span class="istickedoff">unsafeHumanReadablePart = either throw <span class="nottickedoff">id</span> . humanReadablePartFromText</span></span>
+
+</pre>
+</body>
+</html>
