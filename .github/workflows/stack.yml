@@ -11,7 +11,8 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        ghc: ["8.10.4"]
+        os: ["ubuntu-20.04"]
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -23,10 +24,10 @@ jobs:
     - name: 🧰 Setup Haskell
       uses: haskell/actions/setup@v1
       with:
-        ghc-version: '8.6.5'
-        cabal-version: 'latest'
+        ghc-version: ${{ matrix.ghc }}
+        cabal-version: '3.4.0.0'
         enable-stack: true
-        stack-version: '2.5.1'
+        stack-version: '2.7.1'
 
     - name: 📥 Checkout repository
       uses: actions/checkout@v2
