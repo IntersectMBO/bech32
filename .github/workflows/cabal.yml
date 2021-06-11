@@ -7,7 +7,7 @@ on:
     branches: [ "master" ]
 
 jobs:
-  build:
+  cabal_build:
     runs-on: ${{ matrix.os }}
 
     defaults:
@@ -76,9 +76,9 @@ jobs:
         name: ${{ matrix.os }}-exe
         path: bin
 
-  check:
-    needs: build
-    runs-on: ubuntu-latest
+  cabal:
+    needs: cabal_build
+    runs-on: ubuntu-20.04
 
     steps:
     - name: 📥 Checkout repository
