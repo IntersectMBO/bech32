@@ -8,10 +8,11 @@ on:
     tags: [ "*.*.*" ]
 
 jobs:
-  build:
+  stack:
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        ghc: ["8.10.4"]
+        os: ["ubuntu-20.04"]
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -20,17 +21,22 @@ jobs:
       with:
         apt-get: libgmp-dev
 
-    - name: 📥 Checkout repository
-      uses: actions/checkout@v1
+    - name: 🧰 Setup Haskell
+      uses: haskell/actions/setup@v1
+      with:
+        ghc-version: ${{ matrix.ghc }}
+        cabal-version: '3.4.0.0'
+        enable-stack: true
+        stack-version: '2.7.1'
 
-    - name: 🧰 Setup Stack
-      uses: timbod7/setup-stack@1f68f27c99094a718fe60a2790550aafd042f729
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v2
 
     - name: 🔑 Variables
       id: variables
       run: |
         echo ::set-output name=pkg_name::$(cat *.cabal | grep "name:" | sed "s/name:\s*\(.*\)/\1/")
-        echo ::set-output name=cache_key::$(md5sum stack.yaml | awk '{print $1}')
+        echo ::set-output name=cache_key::$(md5sum stack.yaml | awk '{print $1}')-$(stack --version | awk '{print $1}')
 
     - name: 💾 Cache Dependencies
       id: cache
@@ -71,7 +77,7 @@ jobs:
         enable_jekyll: true
 
   release:
-    needs: [build]
+    needs: [stack]
     strategy:
       matrix:
         os: [ubuntu-latest]

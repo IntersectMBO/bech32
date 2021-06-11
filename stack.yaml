@@ -7,3 +7,6 @@ packages:
 
 extra-deps:
 - base58-bytestring-0.1.0@sha256:a1da72ee89d5450bac1c792d9fcbe95ed7154ab7246f2172b57bd4fd9b5eab79,1913
+
+nix:
+  shell-file: shell.nix
