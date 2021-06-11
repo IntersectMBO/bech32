@@ -1,5 +1,5 @@
 name:               bech32-th
-version:            1.0.2
+version:            1.1.1
 synopsis:           Template Haskell extensions to the Bech32 library.
 description:        Template Haskell extensions to the Bech32 library, including
                     quasi-quoters for compile-time checking of Bech32 string
@@ -37,7 +37,7 @@ library
     ghc-options: -Werror
   build-depends:
       base >= 4.11.1.0 && < 5
-    , bech32 >= 1.0.2
+    , bech32 >= 1.1.1
     , template-haskell
     , text
   hs-source-dirs:
