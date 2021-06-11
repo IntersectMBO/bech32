@@ -2,12 +2,22 @@
 
 <!-- This ChangeLog follows a format specified by: https://keepachangelog.com/en/1.0.0/ -->
 
+## [1.1.1] - 2021-06-11
+
+### Added
+
+- Added `--version` switch for the `bech32` command.
+
+### Changed
+
+- Upgraded CI to build with Cabal 3.4.0.0 and GHC 8.10.4.
+
 ## [1.1.0] - 2020-07-08
 
-### Added 
+### Added
 
 - Added `bech32` command-line for easy conversions in the console.
-  
+
   ```console
   Usage: bech32 [PREFIX]
     Convert to and from bech32 strings. Data are read from standard input.
@@ -60,6 +70,6 @@
 
 ## [1.0.0] - 2019-09-27
 
-### Added 
+### Added
 
 - Initial release pulled from https://github.com/input-output-hk/cardano-wallet

@@ -14,11 +14,14 @@ Usage: bech32 [PREFIX]
 Available options:
   -h,--help                Show this help text
   PREFIX                   An optional human-readable prefix (e.g. 'addr').
-                             - When provided, the input text is decoded from various encoding 
-                               formats and re-encoded to bech32 using the given prefix.
-                             - When omitted, the input text is decoded from bech32 to base16.
+                             - When provided, the input text is decoded from
+                               various encoding formats and re-encoded to
+                               bech32 using the given prefix.
+                             - When omitted, the input text is decoded from
+                               bech32 to base16.
+  -v,--version             output version information and exit
 
-Supported input encoding formats: Base16, Bech32 & Base58.
+Supported encoding formats: Base16, Bech32 & Base58.
 ```
 
 ### Examples
