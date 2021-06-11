@@ -19,15 +19,15 @@ source-repository head
   type:     git
   location: https://github.com/input-output-hk/bech32.git
 
-flag werror
-    description: Enable `-Werror`
-    default: False
-    manual: True
-
 flag release
-  description: Compile executables for a release.
-  manual: True
+  description: Strict compiler warning checks.
   default: False
+  manual: True
+
+flag static
+  description: Try to build a static executable.
+  default: False
+  manual: True
 
 library
   default-language:
@@ -36,12 +36,9 @@ library
       NoImplicitPrelude
       OverloadedStrings
   ghc-options:
-      -Wall
-      -Wcompat
-      -fwarn-redundant-constraints
-  if (flag(werror))
-    ghc-options:
-      -Werror
+      -Wall -Wcompat -fwarn-redundant-constraints
+  if flag(release)
+    ghc-options: -Werror
   build-depends:
       array
     , base >= 4.11.1.0 && <5
@@ -61,7 +58,6 @@ executable bech32
       Paths_bech32
   hs-source-dirs:
       app
-  ghc-options: -Wall -Wcompat -fwarn-redundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base
     , base58-bytestring
@@ -71,8 +67,13 @@ executable bech32
     , memory
     , optparse-applicative
     , text
-  if flag(release) && !os(darwin)
-    ghc-options: -Werror -static -O2
+  ghc-options:
+      -Wall -Wcompat -fwarn-redundant-constraints
+      -threaded -rtsopts -with-rtsopts=-N
+  if flag(release)
+    ghc-options: -Werror
+  if flag(static)
+    ghc-options: -static
     cc-options: -static
     ld-options: -static -pthread
   default-language: Haskell2010
@@ -85,11 +86,10 @@ test-suite bech32-test
   hs-source-dirs:
       test
   ghc-options:
-      -threaded -rtsopts -with-rtsopts=-N
       -Wall
-  if (flag(werror))
-    ghc-options:
-      -Werror
+      -threaded -rtsopts -with-rtsopts=-N
+  if flag(release)
+    ghc-options: -Werror
   build-depends:
       base
     , base58-bytestring
