@@ -7,7 +7,7 @@
 --   Template Haskell extensions to the Bech32 library, including
 --   quasi-quoters for compile-time checking of Bech32 string literals.
 @package bech32-th
-@version 1.0.2
+@version 1.1.1
 
 
 -- | This module contains Template-Haskell-specific extensions to the
