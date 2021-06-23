@@ -5,7 +5,7 @@
 
 ## `bech32` command-line
 
-A small executable is available for rapid conversion in the console. Currently only available for Linux. See [releases](https://github.com/input-output-hk/bech32/releases) for pre-compiled binary artifacts.
+A small executable is available for rapid conversion in the console. You can obtain a pre-compiled `bech32` binary for Linux, macOS, and Windows as part of the [`cardano-wallet` Releases](https://github.com/input-output-hk/cardano-wallet/releases).
 
 ```console
 Usage: bech32 [PREFIX]
