@@ -144,7 +144,7 @@ run :: Cmd -> IO ()
 run cmd = case cmd of
     VersionCmd -> putStrLn $ showVersion version
     RunCmd {prefix} -> do
-        source <- T.decodeUtf8 . B8.filter (/= '\n') <$> B8.hGetContents stdin
+        source <- T.strip . T.decodeUtf8 <$> B8.hGetContents stdin
         case prefix of
             Nothing  -> runDecode source
             Just hrp -> runEncode hrp source
