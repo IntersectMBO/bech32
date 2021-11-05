@@ -7,7 +7,7 @@
 --   Implementation of the Bech32 cryptocurrency address format documented
 --   in the BIP (Bitcoin Improvement Proposal) 0173.
 @package bech32
-@version 1.1.1
+@version 1.1.2
 
 
 -- | Implementation of the <a>Bech32</a> address format.
