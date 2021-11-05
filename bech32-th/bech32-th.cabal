@@ -37,7 +37,7 @@ library
     ghc-options: -Werror
   build-depends:
       base >= 4.11.1.0 && < 5
-    , bech32 >= 1.1.1
+    , bech32 >= 1.1.2
     , template-haskell
     , text
   hs-source-dirs:

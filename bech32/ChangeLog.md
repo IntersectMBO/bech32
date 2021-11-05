@@ -1,6 +1,11 @@
 # Changelog
 
 <!-- This ChangeLog follows a format specified by: https://keepachangelog.com/en/1.0.0/ -->
+## [1.1.2] - 2021-11-05
+
+### Fixed
+
+- Strip whitespaces from bech32 stdin to satisfy Windows `echo` command.
 
 ## [1.1.1] - 2021-06-11
 
