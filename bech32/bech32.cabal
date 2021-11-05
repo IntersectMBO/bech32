@@ -1,5 +1,5 @@
 name:          bech32
-version:       1.1.1
+version:       1.1.2
 synopsis:      Implementation of the Bech32 cryptocurrency address format (BIP 0173).
 description:   Implementation of the Bech32 cryptocurrency address format documented in the
                BIP (Bitcoin Improvement Proposal) 0173.
