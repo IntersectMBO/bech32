@@ -56,7 +56,7 @@ jobs:
         mkdir -p bin && cp $(stack path --local-install-root)/bin/* bin && chmod +x bin/*
         mkdir -p dist/haddock && mv $(stack path --local-install-root)/doc/* dist/haddock
         sed -i 's@href="[^"]*/doc/\([^"]*.html\)"@href="\1"@g' dist/haddock/index.html
-        wget -O Makefile https://raw.githubusercontent.com/input-output-hk/adrestia/master/.haskell/coverage/Makefile
+        wget -O Makefile https://raw.githubusercontent.com/input-output-hk/adrestia/7958e55b6a554f7514e2d29a92c144cc347cc91d/.haskell/coverage/Makefile
         mkdir -p .coverage && touch .coverage/template.overlay
         DESTDIR=dist/coverage make report && DESTDIR=dist/coverage make badge
       env:
