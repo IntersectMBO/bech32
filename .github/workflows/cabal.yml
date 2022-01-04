@@ -27,7 +27,7 @@ jobs:
         apt-get: libgmp-dev
 
     - name: 📥 Checkout repository
-      uses: actions/checkout@v1
+      uses: actions/checkout@v2
 
     - name: 🧰 Setup Haskell
       uses: haskell/actions/setup@v1
@@ -82,7 +82,7 @@ jobs:
 
     steps:
     - name: 📥 Checkout repository
-      uses: actions/checkout@v1
+      uses: actions/checkout@v2
 
     - # This serves as the required check in Github for merging
       name: 🌟 Check
