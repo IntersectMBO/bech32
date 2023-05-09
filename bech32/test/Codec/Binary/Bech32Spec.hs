@@ -52,7 +52,7 @@ import Data.Functor.Identity
 import Data.List
     ( intercalate )
 import Data.Maybe
-    ( catMaybes, fromMaybe, isJust )
+    ( fromMaybe, isJust, mapMaybe )
 import Data.Set
     ( Set )
 import Data.Text
@@ -689,7 +689,7 @@ instance Arbitrary HumanReadablePart where
         return hrp
     shrink hrp
         | T.null chars = []
-        | otherwise = catMaybes $ eitherToMaybe . humanReadablePartFromText <$>
+        | otherwise = mapMaybe (eitherToMaybe . humanReadablePartFromText)
             [ T.take (T.length chars `div` 2) chars
             , T.drop 1 chars
             ]

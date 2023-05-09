@@ -1,3 +1,4 @@
+{- HLINT ignore "Unused LANGUAGE pragma" -}
 {-# LANGUAGE TemplateHaskell #-}
 
 -- |
