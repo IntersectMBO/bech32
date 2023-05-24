@@ -65,7 +65,7 @@ executable bech32
     , bytestring
     , extra
     , memory
-    , optparse-applicative
+    , optparse-applicative >= 0.17.0.0 && < 0.18
     , text
   ghc-options:
       -Wall -Wcompat -fwarn-redundant-constraints
