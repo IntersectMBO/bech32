@@ -1,7 +1,5 @@
 <a href="https://hackage.haskell.org/package/bech32"><img src="https://img.shields.io/hackage/v/bech32?style=for-the-badge" /></a>
 <a href="https://github.com/input-output-hk/bech32/releases"><img src="https://img.shields.io/github/release/input-output-hk/bech32.svg?style=for-the-badge" /></a>
-<a href='https://github.com/input-output-hk/bech32/actions?query=workflow%3A"Continuous Integration"'><img src="https://img.shields.io/github/workflow/status/input-output-hk/bech32/Continuous Integration?style=for-the-badge" /></a>
-<a href="https://input-output-hk.github.io/bech32/coverage/hpc_index.html"><img src="https://input-output-hk.github.io/bech32/coverage/badge.svg" /></a>
 
 ## `bech32` command-line
 
@@ -143,7 +141,3 @@ Pull requests are welcome!
 
 When creating a pull request, please make sure that your code adheres to our
 [coding standards](https://github.com/input-output-hk/cardano-wallet/wiki/Coding-Standards).
-
-<hr />
-
-<a href="https://github.com/input-output-hk/bech32/blob/master/bech32/LICENSE"><img src="https://img.shields.io/github/license/input-output-hk/bech32/bech32.svg?style=for-the-badge" /></a>
