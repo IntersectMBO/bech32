@@ -6,7 +6,7 @@ description:        Template Haskell extensions to the Bech32 library, including
                     literals.
 author:             IOHK Engineering Team
 maintainer:         operations@iohk.io, erikd@mega-nerd.com, jonathan.knowles@iohk.io
-copyright:          2020 IOHK
+copyright:          2020-2023 IOHK
 license:            Apache-2.0
 license-file:       LICENSE
 homepage:           https://github.com/input-output-hk/bech32
