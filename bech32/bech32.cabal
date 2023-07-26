@@ -65,7 +65,9 @@ executable bech32
     , bytestring
     , extra
     , memory
-    , optparse-applicative >= 0.17.0.0 && < 0.18
+    , optparse-applicative
+    , prettyprinter
+    , prettyprinter-ansi-terminal
     , text
   ghc-options:
       -Wall -Wcompat -fwarn-redundant-constraints
