@@ -66,7 +66,7 @@ base16 = fromUtf8 . convertToBase Base16 . utf8
 bech32 :: Text -> String -> String
 bech32 txt = T.unpack . Bech32.encodeLenient hrp . dataPartFromBytes . utf8
   where
-    Right hrp = humanReadablePartFromText txt
+    hrp = either (error . ("Error while parsing Bech32: " <>) . show) id $ humanReadablePartFromText txt
 
 
 base58 :: String -> String
