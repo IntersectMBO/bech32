@@ -129,10 +129,10 @@ hrpArgument = argument (eitherReader reader) $ mconcat
     , helpDoc $ Just $ vsep
         [ pretty "An optional human-readable prefix (e.g. 'addr')."
         , indent 2 $ pretty
-            "- When provided, the input pretty is decoded from various encoding \
+            "- When provided, the input text is decoded from various encoding \
             \formats and re-encoded to bech32 using the given prefix."
         , indent 2 $ pretty
-            "- When omitted, the input pretty is decoded from bech32 to base16."
+            "- When omitted, the input text is decoded from bech32 to base16."
         ]
     ]
   where
