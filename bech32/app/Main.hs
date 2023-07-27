@@ -91,23 +91,37 @@ parse = customExecParser (prefs showHelpOnEmpty) parser
         , footerDoc $ Just $ vsep
             [ hsep
                 [ pretty "Supported encoding formats:"
-                , indent 0 $ pretty  "Base16, Bech32 & Base58."
+                , indent 0 $ pretty "Base16, Bech32 & Base58."
                 ]
             , pretty ""
             , pretty "Examples:"
-            , indent 2 $ hsep [annotate underlined $ pretty "To", pretty "Bech32:"]
-            , indent 4 $ annotate bold $ pretty "$ bech32 base16_ <<< 706174617465"
-            , indent 4 $ pretty "base16_1wpshgct5v5r5mxh0"
+            , indent 2
+                $ hsep [annotate underlined $ pretty "To", pretty "Bech32:"]
+            , indent 4
+                $ annotate bold
+                $ pretty "$ bech32 base16_ <<< 706174617465"
+            , indent 4
+                $ pretty "base16_1wpshgct5v5r5mxh0"
             , pretty ""
-            , indent 4 $ annotate bold $ pretty "$ bech32 base58_ <<< Ae2tdPwUPEYy"
-            , indent 4 $ pretty "base58_1p58rejhd9592uusa8pzj2"
+            , indent 4
+                $ annotate bold
+                $ pretty "$ bech32 base58_ <<< Ae2tdPwUPEYy"
+            , indent 4
+                $ pretty "base58_1p58rejhd9592uusa8pzj2"
             , pretty ""
-            , indent 4 $ annotate bold $ pretty "$ bech32 new_prefix <<< old_prefix1wpshgcg2s33x3"
-            , indent 4 $ pretty "new_prefix1wpshgcgeak9mv"
+            , indent 4
+                $ annotate bold
+                $ pretty "$ bech32 new_prefix <<< old_prefix1wpshgcg2s33x3"
+            , indent 4
+                $ pretty "new_prefix1wpshgcgeak9mv"
             , pretty ""
-            , indent 2 $ hsep [annotate underlined $ pretty "From", pretty "Bech32:"]
-            , indent 4 $ annotate bold $ pretty "$ bech32 <<< base16_1wpshgct5v5r5mxh0"
-            , indent 4 $ pretty "706174617465"
+            , indent 2
+                $ hsep [annotate underlined $ pretty "From", pretty "Bech32:"]
+            , indent 4
+                $ annotate bold
+                $ pretty "$ bech32 <<< base16_1wpshgct5v5r5mxh0"
+            , indent 4
+                $ pretty "706174617465"
             ]
         ]
 
@@ -196,8 +210,10 @@ detectEncoding str
         guard (Bech32.separatorChar `elem` str)
         pure Bech32
       where
-        datapart  = reverse . takeWhile (/= Bech32.separatorChar) . reverse $ str
-        humanpart = takeWhile (/= Bech32.separatorChar) str
+        datapart =
+            reverse . takeWhile (/= Bech32.separatorChar) . reverse $ str
+        humanpart =
+            takeWhile (/= Bech32.separatorChar) str
         alpha = filter isLetter str
 
     resembleBase58 = do

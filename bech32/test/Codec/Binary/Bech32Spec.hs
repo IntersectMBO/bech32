@@ -103,7 +103,8 @@ spec = do
                 -- test that a corrupted checksum fails decoding.
                 let (hrp, rest) =
                         T.breakOnEnd (T.singleton separatorChar) checksum
-                let (first, rest') = fromMaybe (error "empty rest") $ T.uncons rest
+                let (first, rest') =
+                        fromMaybe (error "empty rest") $ T.uncons rest
                 let checksumCorrupted =
                         (hrp `T.snoc` chr (ord first `xor` 1))
                         `T.append` rest'
@@ -188,7 +189,10 @@ spec = do
         it "length > maximum" $ do
             let hrpUnpacked = "ca"
             let hrpLength = length hrpUnpacked
-            let hrp = either (error . ("Error while parsing Bech32: " <>) . show) id $ humanReadablePartFromText (T.pack hrpUnpacked)
+            let hrp = either
+                        (error . ("Error while parsing Bech32: " <>) . show)
+                        id
+                    $ humanReadablePartFromText (T.pack hrpUnpacked)
             let maxDataLength =
                     Bech32.encodedStringMaxLength
                     - Bech32.checksumLength - Bech32.separatorLength - hrpLength
@@ -198,7 +202,10 @@ spec = do
                 `shouldBe` Left Bech32.EncodedStringTooLong
 
         it "hrp lowercased" $ do
-            let hrp = either (error . ("Error while parsing Bech32: " <>) . show) id $ humanReadablePartFromText "HRP"
+            let hrp = either
+                        (error . ("Error while parsing Bech32: " <>) . show)
+                        id
+                    $ humanReadablePartFromText "HRP"
             Bech32.encode hrp mempty `shouldBe` Right "hrp1vhqs52"
 
     describe "Arbitrary Bech32String" $
