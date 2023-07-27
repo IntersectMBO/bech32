@@ -155,7 +155,6 @@ spec = do
                         humanReadablePartFromText hrp
                             `shouldBe` Left invalidError
 
-
         it "Lengths are checked correctly." $
             property $ \(HumanReadablePartWithSuspiciousLength hrp) ->
                 let lo  = humanReadablePartMinLength
