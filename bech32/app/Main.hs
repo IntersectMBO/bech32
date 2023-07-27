@@ -49,7 +49,9 @@ import Options.Applicative
 import Paths_bech32
     ( version )
 import Prettyprinter
+    ( annotate, hsep, indent, pretty, vsep )
 import Prettyprinter.Render.Terminal
+    ( bold, underlined )
 import System.IO
     ( BufferMode (..), Handle, hSetBuffering, stderr, stdin, stdout )
 
