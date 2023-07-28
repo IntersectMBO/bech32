@@ -1,6 +1,12 @@
 # Changelog
 
 <!-- This ChangeLog follows a format specified by: https://keepachangelog.com/en/1.0.0/ -->
+## [1.1.4] - 2023-07-28
+
+### Fixed
+
+- Support for `optparse-applicative` versions >= 0.18.0.0.
+
 ## [1.1.3] - 2023-06-06
 
 ### Fixed
