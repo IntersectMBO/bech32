@@ -1,7 +1,7 @@
 <a href="https://hackage.haskell.org/package/bech32"><img src="https://img.shields.io/hackage/v/bech32?style=for-the-badge" /></a>
 <a href="https://github.com/input-output-hk/bech32/releases"><img src="https://img.shields.io/github/release/input-output-hk/bech32.svg?style=for-the-badge" /></a>
 
-## `bech32` command-line
+## `bech32` command-line 
 
 A small executable is available for rapid conversion in the console. You can obtain a pre-compiled `bech32` binary for Linux, macOS, and Windows as part of the [`cardano-wallet` Releases](https://github.com/input-output-hk/cardano-wallet/releases).
 
