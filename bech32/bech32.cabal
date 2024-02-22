@@ -31,7 +31,47 @@ flag static
   default: False
   manual: True
 
+common dependency-array
+    build-depends:array
+common dependency-base
+    build-depends:base                            >= 4.11.1.0   && < 5
+common dependency-base58-bytestring
+    build-depends:base58-bytestring
+common dependency-bytestring
+    build-depends:bytestring
+common dependency-containers
+    build-depends:containers
+common dependency-deepseq
+    build-depends:deepseq
+common dependency-extra
+    build-depends:extra
+common dependency-hspec
+    build-depends:hspec
+common dependency-memory
+    build-depends:memory
+common dependency-optparse-applicative
+    build-depends:optparse-applicative
+common dependency-prettyprinter
+    build-depends:prettyprinter
+common dependency-prettyprinter-ansi-terminal
+    build-depends:prettyprinter-ansi-terminal
+common dependency-process
+    build-depends:process
+common dependency-QuickCheck
+    build-depends:QuickCheck                      >= 2.12
+common dependency-text
+    build-depends:text
+common dependency-vector
+    build-depends:vector
+
 library
+  import:
+    , dependency-array
+    , dependency-base
+    , dependency-bytestring
+    , dependency-containers
+    , dependency-extra
+    , dependency-text
   default-language:
       Haskell2010
   default-extensions:
@@ -41,13 +81,6 @@ library
       -Wall -Wcompat -fwarn-redundant-constraints
   if flag(release)
     ghc-options: -Werror
-  build-depends:
-    , array
-    , base >= 4.11.1.0 && <5
-    , bytestring
-    , containers
-    , extra
-    , text
   hs-source-dirs:
       src
   exposed-modules:
@@ -55,6 +88,18 @@ library
       Codec.Binary.Bech32.Internal
 
 executable bech32
+  import:
+    , dependency-base
+    , dependency-base58-bytestring
+    , dependency-bytestring
+    , dependency-extra
+    , dependency-memory
+    , dependency-optparse-applicative
+    , dependency-prettyprinter
+    , dependency-prettyprinter-ansi-terminal
+    , dependency-text
+  build-depends:
+    , bech32
   main-is: Main.hs
   other-modules:
       Paths_bech32
@@ -62,17 +107,6 @@ executable bech32
       Paths_bech32
   hs-source-dirs:
       app
-  build-depends:
-    , base
-    , base58-bytestring
-    , bech32
-    , bytestring
-    , extra
-    , memory
-    , optparse-applicative
-    , prettyprinter
-    , prettyprinter-ansi-terminal
-    , text
   ghc-options:
       -Wall -Wcompat -fwarn-redundant-constraints
       -threaded -rtsopts -with-rtsopts=-N
@@ -85,6 +119,24 @@ executable bech32
   default-language: Haskell2010
 
 test-suite bech32-test
+  import:
+    , dependency-base
+    , dependency-base58-bytestring
+    , dependency-bytestring
+    , dependency-containers
+    , dependency-deepseq
+    , dependency-extra
+    , dependency-hspec
+    , dependency-memory
+    , dependency-process
+    , dependency-QuickCheck
+    , dependency-text
+    , dependency-vector
+  build-depends:
+    , bech32
+  build-tool-depends:
+    , bech32:bech32
+    , hspec-discover:hspec-discover
   default-language:
       Haskell2010
   type:
@@ -96,23 +148,6 @@ test-suite bech32-test
       -threaded -rtsopts -with-rtsopts=-N
   if flag(release)
     ghc-options: -Werror
-  build-depends:
-    , base
-    , base58-bytestring
-    , bech32
-    , bytestring
-    , containers
-    , deepseq
-    , extra
-    , hspec
-    , memory
-    , process
-    , QuickCheck >= 2.12
-    , text
-    , vector
-  build-tool-depends:
-    , bech32:bech32
-    , hspec-discover:hspec-discover
   main-is:
       Main.hs
   other-modules:

@@ -27,7 +27,23 @@ flag release
   default: False
   manual: True
 
+common dependency-base
+    build-depends:base                            >= 4.11.1.0   && < 5
+common dependency-bech32
+    build-depends:bech32                          >= 1.1.2
+common dependency-hspec
+    build-depends:hspec
+common dependency-template-haskell
+    build-depends:template-haskell
+common dependency-text
+    build-depends:text
+
 library
+  import:
+    , dependency-base
+    , dependency-bech32
+    , dependency-template-haskell
+    , dependency-text
   default-language:
       Haskell2010
   default-extensions:
@@ -37,17 +53,21 @@ library
       -Wall -Wcompat -fwarn-redundant-constraints
   if flag(release)
     ghc-options: -Werror
-  build-depends:
-    , base >= 4.11.1.0 && < 5
-    , bech32 >= 1.1.2
-    , template-haskell
-    , text
   hs-source-dirs:
       src
   exposed-modules:
       Codec.Binary.Bech32.TH
 
 test-suite bech32-th-test
+  import:
+    , dependency-base
+    , dependency-bech32
+    , dependency-hspec
+    , dependency-template-haskell
+  build-depends:
+    , bech32-th
+  build-tool-depends:
+    , hspec-discover:hspec-discover
   default-language:
       Haskell2010
   default-extensions:
@@ -62,14 +82,6 @@ test-suite bech32-th-test
       -threaded -rtsopts -with-rtsopts=-N
   if flag(release)
     ghc-options: -Werror
-  build-depends:
-    , base
-    , bech32
-    , bech32-th
-    , hspec
-    , template-haskell
-  build-tool-depends:
-    , hspec-discover:hspec-discover
   main-is:
       Main.hs
   other-modules:
