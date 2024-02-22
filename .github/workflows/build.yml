@@ -27,11 +27,11 @@ jobs:
         cabal:
           - 3.8.1.0
         ghc:
-          - 8.10
-          - 9.0
-          - 9.2
-          - 9.4
-          - 9.6
+          - '8.10'
+          - '9.0'
+          - '9.2'
+          - '9.4'
+          - '9.6'
     steps:
       - name: Checkout
         uses: actions/checkout@v3
