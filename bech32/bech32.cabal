@@ -1,3 +1,4 @@
+cabal-version: 3.0
 name:          bech32
 version:       1.1.4
 synopsis:      Implementation of the Bech32 cryptocurrency address format (BIP 0173).
@@ -13,7 +14,6 @@ bug-reports:   https://github.com/input-output-hk/bech32/issues
 category:      Web
 build-type:    Simple
 extra-source-files:  ChangeLog.md
-cabal-version: >=1.10
 
 source-repository head
   type:     git
@@ -106,9 +106,9 @@ test-suite bech32-test
     , QuickCheck >= 2.12
     , text
     , vector
-  build-tools:
-      hspec-discover
-    , bech32
+  build-tool-depends:
+      hspec-discover:hspec-discover
+    , bech32:bech32
   main-is:
       Main.hs
   other-modules:
