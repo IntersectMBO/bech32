@@ -1,8 +1,5 @@
-index-state:
-  , hackage.haskell.org 2023-07-27T22:41:49Z
-
 packages:
-  bech32/bech32.cabal
-  bech32-th/bech32-th.cabal
+  bech32
+  bech32-th
 
 flags: +development

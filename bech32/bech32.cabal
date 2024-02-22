@@ -1,3 +1,4 @@
+cabal-version: 3.0
 name:          bech32
 version:       1.1.4
 synopsis:      Implementation of the Bech32 cryptocurrency address format (BIP 0173).
@@ -12,8 +13,9 @@ homepage:      https://github.com/input-output-hk/bech32
 bug-reports:   https://github.com/input-output-hk/bech32/issues
 category:      Web
 build-type:    Simple
-extra-source-files:  ChangeLog.md
-cabal-version: >=1.10
+
+extra-doc-files:
+  ChangeLog.md
 
 source-repository head
   type:     git
@@ -29,7 +31,47 @@ flag static
   default: False
   manual: True
 
+common dependency-array
+    build-depends:array                           >= 0.5.4.0    && < 0.6
+common dependency-base
+    build-depends:base                            >= 4.14.3.0   && < 4.20
+common dependency-base58-bytestring
+    build-depends:base58-bytestring               >= 0.1.0      && < 0.2
+common dependency-bytestring
+    build-depends:bytestring                      >= 0.10.12.0  && < 0.13
+common dependency-containers
+    build-depends:containers                      >= 0.6.5.1    && < 0.7
+common dependency-deepseq
+    build-depends:deepseq                         >= 1.4.4.0    && < 1.6
+common dependency-extra
+    build-depends:extra                           >= 1.7.14     && < 1.8
+common dependency-hspec
+    build-depends:hspec                           >= 2.11.7     && < 2.12
+common dependency-memory
+    build-depends:memory                          >= 0.18.0     && < 0.19
+common dependency-optparse-applicative
+    build-depends:optparse-applicative            >= 0.18.1.0   && < 0.19
+common dependency-prettyprinter
+    build-depends:prettyprinter                   >= 1.7.1      && < 1.8
+common dependency-prettyprinter-ansi-terminal
+    build-depends:prettyprinter-ansi-terminal     >= 1.1.3      && < 1.2
+common dependency-process
+    build-depends:process                         >= 1.6.13.2   && < 1.7
+common dependency-QuickCheck
+    build-depends:QuickCheck                      >= 2.14.3     && < 2.15
+common dependency-text
+    build-depends:text                            >= 1.2.4.1    && < 2.2
+common dependency-vector
+    build-depends:vector                          >= 0.13.1.0   && < 0.14
+
 library
+  import:
+    , dependency-array
+    , dependency-base
+    , dependency-bytestring
+    , dependency-containers
+    , dependency-extra
+    , dependency-text
   default-language:
       Haskell2010
   default-extensions:
@@ -39,13 +81,6 @@ library
       -Wall -Wcompat -fwarn-redundant-constraints
   if flag(release)
     ghc-options: -Werror
-  build-depends:
-      array
-    , base >= 4.11.1.0 && <5
-    , bytestring
-    , containers
-    , extra
-    , text
   hs-source-dirs:
       src
   exposed-modules:
@@ -53,22 +88,25 @@ library
       Codec.Binary.Bech32.Internal
 
 executable bech32
+  import:
+    , dependency-base
+    , dependency-base58-bytestring
+    , dependency-bytestring
+    , dependency-extra
+    , dependency-memory
+    , dependency-optparse-applicative
+    , dependency-prettyprinter
+    , dependency-prettyprinter-ansi-terminal
+    , dependency-text
+  build-depends:
+    , bech32
   main-is: Main.hs
   other-modules:
       Paths_bech32
+  autogen-modules:
+      Paths_bech32
   hs-source-dirs:
       app
-  build-depends:
-      base
-    , base58-bytestring
-    , bech32
-    , bytestring
-    , extra
-    , memory
-    , optparse-applicative
-    , prettyprinter
-    , prettyprinter-ansi-terminal
-    , text
   ghc-options:
       -Wall -Wcompat -fwarn-redundant-constraints
       -threaded -rtsopts -with-rtsopts=-N
@@ -81,6 +119,24 @@ executable bech32
   default-language: Haskell2010
 
 test-suite bech32-test
+  import:
+    , dependency-base
+    , dependency-base58-bytestring
+    , dependency-bytestring
+    , dependency-containers
+    , dependency-deepseq
+    , dependency-extra
+    , dependency-hspec
+    , dependency-memory
+    , dependency-process
+    , dependency-QuickCheck
+    , dependency-text
+    , dependency-vector
+  build-depends:
+    , bech32
+  build-tool-depends:
+    , bech32:bech32
+    , hspec-discover:hspec-discover
   default-language:
       Haskell2010
   type:
@@ -92,23 +148,6 @@ test-suite bech32-test
       -threaded -rtsopts -with-rtsopts=-N
   if flag(release)
     ghc-options: -Werror
-  build-depends:
-      base
-    , base58-bytestring
-    , bech32
-    , bytestring
-    , containers
-    , deepseq
-    , extra
-    , hspec
-    , memory
-    , process
-    , QuickCheck >= 2.12
-    , text
-    , vector
-  build-tools:
-      hspec-discover
-    , bech32
   main-is:
       Main.hs
   other-modules:

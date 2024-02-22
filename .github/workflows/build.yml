@@ -32,6 +32,7 @@ jobs:
           - '9.2'
           - '9.4'
           - '9.6'
+          - '9.8'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -107,7 +108,7 @@ jobs:
         if: |
             github.ref == 'refs/heads/main'
             && matrix.os == 'ubuntu-latest'
-            && matrix.ghc == '9.6'
+            && matrix.ghc == '9.8'
         run: >
           mv ${{ env.cabal-build-dir }}/build/*/*/*/doc/html/* gh-pages
 
@@ -117,7 +118,7 @@ jobs:
         if: |
             github.ref == 'refs/heads/main'
             && matrix.os == 'ubuntu-latest'
-            && matrix.ghc == '9.6'
+            && matrix.ghc == '9.8'
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           branch: gh-pages
