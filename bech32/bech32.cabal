@@ -42,7 +42,7 @@ library
   if flag(release)
     ghc-options: -Werror
   build-depends:
-      array
+    , array
     , base >= 4.11.1.0 && <5
     , bytestring
     , containers
@@ -63,7 +63,7 @@ executable bech32
   hs-source-dirs:
       app
   build-depends:
-      base
+    , base
     , base58-bytestring
     , bech32
     , bytestring
@@ -97,7 +97,7 @@ test-suite bech32-test
   if flag(release)
     ghc-options: -Werror
   build-depends:
-      base
+    , base
     , base58-bytestring
     , bech32
     , bytestring
@@ -111,8 +111,8 @@ test-suite bech32-test
     , text
     , vector
   build-tool-depends:
-      hspec-discover:hspec-discover
     , bech32:bech32
+    , hspec-discover:hspec-discover
   main-is:
       Main.hs
   other-modules:

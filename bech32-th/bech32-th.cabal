@@ -38,7 +38,7 @@ library
   if flag(release)
     ghc-options: -Werror
   build-depends:
-      base >= 4.11.1.0 && < 5
+    , base >= 4.11.1.0 && < 5
     , bech32 >= 1.1.2
     , template-haskell
     , text
@@ -63,13 +63,13 @@ test-suite bech32-th-test
   if flag(release)
     ghc-options: -Werror
   build-depends:
-      base
+    , base
     , bech32
     , bech32-th
     , hspec
     , template-haskell
   build-tool-depends:
-      hspec-discover:hspec-discover
+    , hspec-discover:hspec-discover
   main-is:
       Main.hs
   other-modules:
