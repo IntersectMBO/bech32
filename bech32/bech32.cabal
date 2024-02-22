@@ -32,37 +32,37 @@ flag static
   manual: True
 
 common dependency-array
-    build-depends:array
+    build-depends:array                           >= 0.5.4.0
 common dependency-base
-    build-depends:base                            >= 4.11.1.0   && < 5
+    build-depends:base                            >= 4.14.3.0   && < 5
 common dependency-base58-bytestring
-    build-depends:base58-bytestring
+    build-depends:base58-bytestring               >= 0.1.0
 common dependency-bytestring
-    build-depends:bytestring
+    build-depends:bytestring                      >= 0.10.12.0
 common dependency-containers
-    build-depends:containers
+    build-depends:containers                      >= 0.6.5.1
 common dependency-deepseq
-    build-depends:deepseq
+    build-depends:deepseq                         >= 1.4.4.0
 common dependency-extra
-    build-depends:extra
+    build-depends:extra                           >= 1.7.14
 common dependency-hspec
-    build-depends:hspec
+    build-depends:hspec                           >= 2.11.7
 common dependency-memory
-    build-depends:memory
+    build-depends:memory                          >= 0.18.0
 common dependency-optparse-applicative
-    build-depends:optparse-applicative
+    build-depends:optparse-applicative            >= 0.18.1.0
 common dependency-prettyprinter
-    build-depends:prettyprinter
+    build-depends:prettyprinter                   >= 1.7.1
 common dependency-prettyprinter-ansi-terminal
-    build-depends:prettyprinter-ansi-terminal
+    build-depends:prettyprinter-ansi-terminal     >= 1.1.3
 common dependency-process
-    build-depends:process
+    build-depends:process                         >= 1.6.13.2
 common dependency-QuickCheck
-    build-depends:QuickCheck                      >= 2.12
+    build-depends:QuickCheck                      >= 2.14.3
 common dependency-text
-    build-depends:text
+    build-depends:text                            >= 1.2.4.1
 common dependency-vector
-    build-depends:vector
+    build-depends:vector                          >= 0.13.1.0
 
 library
   import:
