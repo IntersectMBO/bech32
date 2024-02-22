@@ -59,7 +59,7 @@ jobs:
           --builddir=${{ env.cabal-build-dir }}
 
       - name: Cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         env:
           hash: ${{ hashFiles('cabal.project.freeze') }}
         with:
