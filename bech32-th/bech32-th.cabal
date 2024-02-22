@@ -14,7 +14,9 @@ homepage:           https://github.com/input-output-hk/bech32
 bug-reports:        https://github.com/input-output-hk/bech32/issues
 category:           Web
 build-type:         Simple
-extra-source-files: ChangeLog.md
+
+extra-doc-files:
+  ChangeLog.md
 
 source-repository head
   type:     git
