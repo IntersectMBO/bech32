@@ -58,6 +58,8 @@ executable bech32
   main-is: Main.hs
   other-modules:
       Paths_bech32
+  autogen-modules:
+      Paths_bech32
   hs-source-dirs:
       app
   build-depends:
