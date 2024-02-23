@@ -1,6 +1,17 @@
 # Changelog
 
 <!-- This ChangeLog follows a format specified by: https://keepachangelog.com/en/1.0.0/ -->
+
+## [1.1.5] - 2024-02-23
+
+### Fixed
+
+- Specified version bounds for all package dependencies.
+
+### Added
+
+- Added support for GHC 9.8 series.
+
 ## [1.1.4] - 2023-07-28
 
 ### Fixed
