@@ -1,11 +1,11 @@
 cabal-version: 3.0
 name:          bech32
-version:       1.1.5
+version:       1.1.6
 synopsis:      Implementation of the Bech32 cryptocurrency address format (BIP 0173).
 description:   Implementation of the Bech32 cryptocurrency address format documented in the
                BIP (Bitcoin Improvement Proposal) 0173.
 author:        IOHK Engineering Team
-maintainer:    operations@iohk.io, erikd@mega-nerd.com, jonathan.knowles@iohk.io
+maintainer:    operations@iohk.io, erikd@mega-nerd.com, mail@jonathanknowles.net
 copyright:     2017 Marko Bencun, 2019-2023 IOHK
 license:       Apache-2.0
 license-file:  LICENSE
@@ -40,7 +40,7 @@ common dependency-base58-bytestring
 common dependency-bytestring
     build-depends:bytestring                      >= 0.10.12.0  && < 0.13
 common dependency-containers
-    build-depends:containers                      >= 0.6.5.1    && < 0.7
+    build-depends:containers                      >= 0.6.5.1    && < 0.8
 common dependency-deepseq
     build-depends:deepseq                         >= 1.4.4.0    && < 1.6
 common dependency-extra
@@ -58,7 +58,7 @@ common dependency-prettyprinter-ansi-terminal
 common dependency-process
     build-depends:process                         >= 1.6.13.2   && < 1.7
 common dependency-QuickCheck
-    build-depends:QuickCheck                      >= 2.14.3     && < 2.15
+    build-depends:QuickCheck                      >= 2.14.3     && < 2.16
 common dependency-text
     build-depends:text                            >= 1.2.4.1    && < 2.2
 common dependency-vector

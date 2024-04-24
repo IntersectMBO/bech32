@@ -2,6 +2,12 @@
 
 <!-- This ChangeLog follows a format specified by: https://keepachangelog.com/en/1.0.0/ -->
 
+## [1.1.6] - 2024-04-24
+
+### Changed
+
+- Revised upper version bounds for dependencies.
+
 ## [1.1.5] - 2024-02-23
 
 ### Fixed
