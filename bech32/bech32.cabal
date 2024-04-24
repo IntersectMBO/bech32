@@ -5,7 +5,7 @@ synopsis:      Implementation of the Bech32 cryptocurrency address format (BIP 0
 description:   Implementation of the Bech32 cryptocurrency address format documented in the
                BIP (Bitcoin Improvement Proposal) 0173.
 author:        IOHK Engineering Team
-maintainer:    operations@iohk.io, erikd@mega-nerd.com, jonathan.knowles@iohk.io
+maintainer:    operations@iohk.io, erikd@mega-nerd.com, mail@jonathanknowles.net
 copyright:     2017 Marko Bencun, 2019-2023 IOHK
 license:       Apache-2.0
 license-file:  LICENSE
