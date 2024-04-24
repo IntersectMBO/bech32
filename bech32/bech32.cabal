@@ -58,7 +58,7 @@ common dependency-prettyprinter-ansi-terminal
 common dependency-process
     build-depends:process                         >= 1.6.13.2   && < 1.7
 common dependency-QuickCheck
-    build-depends:QuickCheck                      >= 2.14.3     && < 2.15
+    build-depends:QuickCheck                      >= 2.14.3     && < 2.16
 common dependency-text
     build-depends:text                            >= 1.2.4.1    && < 2.2
 common dependency-vector
