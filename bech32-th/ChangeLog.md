@@ -1,5 +1,11 @@
 # ChangeLog for `bech32-th`
 
+## [1.1.6] - 2024-04-24
+
+### Changed
+
+- Revised upper version bounds for dependencies.
+
 ## [1.1.5] - 2024-02-23
 
 ### Fixed
