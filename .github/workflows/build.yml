@@ -33,6 +33,13 @@ jobs:
           - '9.4'
           - '9.6'
           - '9.8'
+        exclude:
+          # TODO: https://github.com/IntersectMBO/bech32/issues/72
+          # To work around the above issue, we exclude the following versions:
+          - os: macOS-latest
+            ghc: '8.10'
+          - os: macOS-latest
+            ghc: '9.0'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
