@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               bech32-th
-version:            1.1.6
+version:            1.1.7
 synopsis:           Template Haskell extensions to the Bech32 library.
 description:        Template Haskell extensions to the Bech32 library, including
                     quasi-quoters for compile-time checking of Bech32 string
@@ -30,7 +30,7 @@ flag release
 common dependency-base
     build-depends:base                            >= 4.14.3.0   && < 4.21
 common dependency-bech32
-    build-depends:bech32                          >= 1.1.5      && < 1.2
+    build-depends:bech32                          >= 1.1.7      && < 1.2
 common dependency-hspec
     build-depends:hspec                           >= 2.11.7     && < 2.12
 common dependency-template-haskell
