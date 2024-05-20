@@ -72,40 +72,73 @@ module Codec.Binary.Bech32.Internal
 
     ) where
 
-import Prelude
-
+import Control.Applicative
+    ( Applicative (pure) )
 import Control.Exception
     ( Exception )
 import Control.Monad
-    ( guard, join )
+    ( guard, join, mapM, return, (=<<) )
 import Data.Array
     ( Array )
 import Data.Bifunctor
     ( first )
 import Data.Bits
     ( Bits, testBit, unsafeShiftL, unsafeShiftR, xor, (.&.), (.|.) )
+import Data.Bool
+    ( Bool, not, otherwise, (&&), (||) )
 import Data.ByteString
     ( ByteString )
 import Data.Char
-    ( chr, ord, toLower, toUpper )
+    ( Char, chr, ord, toLower, toUpper )
+import Data.Either
+    ( Either (Left, Right) )
 import Data.Either.Extra
     ( maybeToEither )
+import Data.Eq
+    ( Eq ((/=), (==)) )
 import Data.Foldable
-    ( foldl' )
+    ( Foldable (length, null), foldl' )
+import Data.Function
+    ( ($), (.) )
+import Data.Functor
+    ( Functor (fmap), (<$>) )
 import Data.Functor.Identity
     ( Identity, runIdentity )
+import Data.Int
+    ( Int )
 import Data.Ix
     ( Ix (..) )
 import Data.List
-    ( sort )
+    ( concat, filter, map, reverse, sort, take, zip, (++) )
 import Data.Map.Strict
     ( Map )
 import Data.Maybe
-    ( isNothing, mapMaybe )
+    ( Maybe (Just, Nothing), isNothing, mapMaybe )
+import Data.Monoid
+    ( Monoid )
+import Data.Ord
+    ( Ord (..) )
+import Data.Semigroup
+    ( Semigroup ((<>)) )
+import Data.String
+    ( String )
 import Data.Text
     ( Text )
+import Data.Traversable
+    ( Traversable (traverse) )
+import Data.Tuple
+    ( fst, snd )
 import Data.Word
-    ( Word8 )
+    ( Word, Word8 )
+import Prelude
+    ( Bounded (maxBound, minBound)
+    , Enum (fromEnum, toEnum)
+    , Integral (mod, rem)
+    , Num (..)
+    , fromIntegral
+    )
+import Text.Show
+    ( Show )
 
 import qualified Data.Array as Arr
 import qualified Data.ByteString as BS
