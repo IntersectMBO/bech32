@@ -33,38 +33,13 @@
         inherit (nixpkgs) lib;
 
         # see flake `variants` below for alternative compilers
-        defaultCompiler = "ghc8107";
+        defaultCompiler = "ghc965";
         # We use cabalProject' to ensure we don't build the plan for
         # all systems.
         cabalProject = nixpkgs.haskell-nix.cabalProject' ({config, ...}: {
           src = ./.;
           name = "bech32";
           compiler-nix-name = lib.mkDefault defaultCompiler;
-
-          # we also want cross compilation to windows on linux (and only with default compiler).
-          crossPlatforms = p:
-            lib.optional (system == "x86_64-linux" && config.compiler-nix-name == defaultCompiler)
-            p.mingwW64;
-
-          # tools we want in our shell, from hackage
-          shell.tools =
-            {
-              cabal = "3.10.1.0";
-              ghcid = "0.8.8";
-            }
-            // lib.optionalAttrs (config.compiler-nix-name == defaultCompiler) {
-              # tools that work only with default compiler
-              #stylish-haskell = "0.14.4.0";
-              #hlint = "3.5";
-              haskell-language-server = "2.0.0.0";
-            };
-          # and from nixpkgs or other inputs
-          shell.nativeBuildInputs = with nixpkgs; [
-          ];
-          # disable Hoogle until someone request it
-          shell.withHoogle = false;
-          # Skip cross compilers for the shell
-          shell.crossPlatforms = _: [];
 
           # package customizations as needed. Where cabal.project is not
           # specific enough, or doesn't allow setting these.
@@ -87,38 +62,11 @@
         lib.recursiveUpdate flake rec {
           project = cabalProject;
           # add a required job, that's basically all hydraJobs.
-          hydraJobs =
-            nixpkgs.callPackages inputs.iohkNix.utils.ciJobsAggregates
-            {
-              ciJobs =
-                flake.hydraJobs
+          hydraJobs = flake.hydraJobs
                 // {
                   # This ensure hydra send a status for the required job (even if no change other than commit hash)
                   revision = nixpkgs.writeText "revision" (inputs.self.rev or "dirty");
                 };
-            };
-          legacyPackages = rec {
-            inherit cabalProject nixpkgs;
-            # also provide hydraJobs through legacyPackages to allow building without system prefix:
-            inherit hydraJobs;
-            # expose bech32 binary at top-level
-            bech32 = cabalProject.hsPkgs.bech32.components.exes.bech32;
-          };
-          devShells = let
-            profillingShell = p: {
-              # `nix develop .#profiling` (or `.#ghc927.profiling): a shell with profiling enabled
-              profiling = (p.appendModule {modules = [{enableLibraryProfiling = true;}];}).shell;
-            };
-          in
-            profillingShell cabalProject
-            # Additional shells for every GHC version supported by haskell.nix, eg. `nix develop .#ghc927`
-            // lib.mapAttrs (compiler-nix-name: _: let
-              p = cabalProject.appendModule {inherit compiler-nix-name;};
-            in
-              p.shell // (profillingShell p))
-            nixpkgs.haskell-nix.compiler;
-          # formatter used by nix fmt
-          formatter = nixpkgs.alejandra;
         }
     );
 
