@@ -1,5 +1,9 @@
 # ChangeLog for `bech32-th`
 
+## [1.1.7] - 2024-05-20
+
+- Added support for GHC 9.10 series.
+
 ## [1.1.6] - 2024-04-24
 
 ### Changed

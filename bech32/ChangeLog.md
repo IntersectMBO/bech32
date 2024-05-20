@@ -2,6 +2,10 @@
 
 <!-- This ChangeLog follows a format specified by: https://keepachangelog.com/en/1.0.0/ -->
 
+## [1.1.7] - 2024-05-20
+
+- Added support for GHC 9.10 series.
+
 ## [1.1.6] - 2024-04-24
 
 ### Changed
