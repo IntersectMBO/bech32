@@ -44,7 +44,7 @@ common dependency-containers
 common dependency-deepseq
     build-depends:deepseq                         >= 1.4.4.0    && < 1.6
 common dependency-extra
-    build-depends:extra                           >= 1.7.14     && < 1.8
+    build-depends:extra                           >= 1.7.14     && < 1.9
 common dependency-hspec
     build-depends:hspec                           >= 2.11.7     && < 2.12
 common dependency-memory
