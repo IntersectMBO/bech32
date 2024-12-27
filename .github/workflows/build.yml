@@ -34,6 +34,7 @@ jobs:
           - '9.6'
           - '9.8'
           - '9.10'
+          - '9.12'
         exclude:
           # TODO: https://github.com/IntersectMBO/bech32/issues/72
           # To work around the above issue, we exclude the following versions:
