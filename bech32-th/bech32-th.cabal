@@ -28,7 +28,7 @@ flag release
   manual: True
 
 common dependency-base
-    build-depends:base                            >= 4.14.3.0   && < 4.21
+    build-depends:base                            >= 4.14.3.0   && < 4.22
 common dependency-bech32
     build-depends:bech32                          >= 1.1.7      && < 1.2
 common dependency-hspec
