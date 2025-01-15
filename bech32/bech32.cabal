@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name:          bech32
-version:       1.1.7
+version:       1.1.8
 synopsis:      Implementation of the Bech32 cryptocurrency address format (BIP 0173).
 description:   Implementation of the Bech32 cryptocurrency address format documented in the
                BIP (Bitcoin Improvement Proposal) 0173.
@@ -34,7 +34,7 @@ flag static
 common dependency-array
     build-depends:array                           >= 0.5.4.0    && < 0.6
 common dependency-base
-    build-depends:base                            >= 4.14.3.0   && < 4.21
+    build-depends:base                            >= 4.14.3.0   && < 4.22
 common dependency-base58-bytestring
     build-depends:base58-bytestring               >= 0.1.0      && < 0.2
 common dependency-bytestring
@@ -44,7 +44,7 @@ common dependency-containers
 common dependency-deepseq
     build-depends:deepseq                         >= 1.4.4.0    && < 1.6
 common dependency-extra
-    build-depends:extra                           >= 1.7.14     && < 1.8
+    build-depends:extra                           >= 1.7.14     && < 1.9
 common dependency-hspec
     build-depends:hspec                           >= 2.11.7     && < 2.12
 common dependency-memory

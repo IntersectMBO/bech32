@@ -34,6 +34,7 @@ jobs:
           - '9.6'
           - '9.8'
           - '9.10'
+          - '9.12'
         exclude:
           # TODO: https://github.com/IntersectMBO/bech32/issues/72
           # To work around the above issue, we exclude the following versions:
@@ -116,7 +117,7 @@ jobs:
         if: |
             github.ref == 'refs/heads/main'
             && matrix.os == 'ubuntu-latest'
-            && matrix.ghc == '9.10'
+            && matrix.ghc == '9.12'
         run: >
           mv ${{ env.cabal-build-dir }}/build/*/*/*/doc/html/* gh-pages
 
@@ -126,7 +127,7 @@ jobs:
         if: |
             github.ref == 'refs/heads/main'
             && matrix.os == 'ubuntu-latest'
-            && matrix.ghc == '9.10'
+            && matrix.ghc == '9.12'
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           branch: gh-pages
