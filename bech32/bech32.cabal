@@ -50,7 +50,7 @@ common dependency-hspec
 common dependency-memory
     build-depends:memory                          >= 0.18.0     && < 0.19
 common dependency-optparse-applicative
-    build-depends:optparse-applicative            >= 0.18.1.0   && < 0.19
+    build-depends:optparse-applicative            >= 0.18.1.0   && < 0.20
 common dependency-prettyprinter
     build-depends:prettyprinter                   >= 1.7.1      && < 1.8
 common dependency-prettyprinter-ansi-terminal
