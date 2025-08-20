@@ -28,13 +28,13 @@ flag release
   manual: True
 
 common dependency-base
-    build-depends:base                            >= 4.14.3.0   && < 4.22
+    build-depends:base                            >= 4.14.3.0   && < 4.23
 common dependency-bech32
     build-depends:bech32                          >= 1.1.7      && < 1.2
 common dependency-hspec
     build-depends:hspec                           >= 2.11.7     && < 2.12
 common dependency-template-haskell
-    build-depends:template-haskell                >= 2.16.0.0   && < 2.24
+    build-depends:template-haskell                >= 2.16.0.0   && < 2.25
 common dependency-text
     build-depends:text                            >= 1.2.4.1    && < 2.2
 
