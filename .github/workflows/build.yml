@@ -25,26 +25,18 @@ jobs:
           - macOS-latest
           - windows-latest
         cabal:
-          - '3.10'
+          - '3.16'
         ghc:
-          - '8.10'
-          - '9.0'
           - '9.2'
           - '9.4'
           - '9.6'
           - '9.8'
           - '9.10'
           - '9.12'
-        exclude:
-          # TODO: https://github.com/IntersectMBO/bech32/issues/72
-          # To work around the above issue, we exclude the following versions:
-          - os: macOS-latest
-            ghc: '8.10'
-          - os: macOS-latest
-            ghc: '9.0'
+          - '9.14'
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Environment
         uses: haskell-actions/setup@v2
@@ -69,7 +61,7 @@ jobs:
           --builddir=${{ env.cabal-build-dir }}
 
       - name: Cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         env:
           hash: ${{ hashFiles('cabal.project.freeze') }}
         with:
@@ -117,7 +109,7 @@ jobs:
         if: |
             github.ref == 'refs/heads/main'
             && matrix.os == 'ubuntu-latest'
-            && matrix.ghc == '9.12'
+            && matrix.ghc == '9.14'
         run: >
           mv ${{ env.cabal-build-dir }}/build/*/*/*/doc/html/* gh-pages
 
@@ -127,7 +119,7 @@ jobs:
         if: |
             github.ref == 'refs/heads/main'
             && matrix.os == 'ubuntu-latest'
-            && matrix.ghc == '9.12'
+            && matrix.ghc == '9.14'
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           branch: gh-pages

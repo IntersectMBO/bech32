@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               bech32-th
-version:            1.1.9
+version:            1.1.10
 synopsis:           Template Haskell extensions to the Bech32 library.
 description:        Template Haskell extensions to the Bech32 library, including
                     quasi-quoters for compile-time checking of Bech32 string

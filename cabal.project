@@ -6,11 +6,3 @@ flags: +development
 
 tests: True
 test-show-details: direct
-
-if impl (ghc >= 9.14)
-  allow-newer:
-    , primitive:base
-    , splitmix:base
-    , text:template-haskell
-    , vector:base
-    , vector-stream:base

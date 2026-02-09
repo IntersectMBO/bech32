@@ -2,6 +2,11 @@
 
 <!-- This ChangeLog follows a format specified by: https://keepachangelog.com/en/1.0.0/ -->
 
+## [1.1.10] - 2026-01-30
+
+- Added support for GHC 9.14 series.
+- Revised upper version bounds for dependencies.
+
 ## [1.1.9] - 2025-06-05
 
 - Revised upper version bounds for dependencies.
