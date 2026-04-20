@@ -1,5 +1,9 @@
 # ChangeLog for `bech32-th`
 
+## [1.1.11] - 2026-04-20
+
+- Revised upper version bounds for dependencies.
+
 ## [1.1.10] - 2026-01-30
 
 - Added support for GHC 9.14 series.
